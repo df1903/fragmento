@@ -1,0 +1,61 @@
+# --- Herramientas de IA y contexto de trabajo (NO se suben al repositorio) ---
+.claude/
+.context/
+.agents/
+.cursor/
+.windsurf/
+.mcp.json
+.mcp.json.example
+.mcp*.json
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+PLAN_FRAGMENTO.md
+PROMPT_CLAUDE_CODE_FRAGMENTO.md
+temp/
+
+# --- Entorno local ---
+.env
+.env.*
+!.env.example
+
+# --- Unity ---
+/[Ll]ibrary/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+# Carpeta Temp de Unity (solo existe con el Editor abierto)
+/Temp/
+
+# --- Archivos generados por el IDE ---
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Crash logs de Unity
+sysinfo.txt
+crashlytics-build.properties
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
