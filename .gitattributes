@@ -1,0 +1,31 @@
+# Normaliza finales de línea en texto
+* text=auto
+
+# Código y texto
+*.cs text diff=csharp
+*.md text
+*.json text
+*.asmdef text
+*.shader text
+*.cginc text
+*.hlsl text
+
+# Archivos YAML de Unity (escenas, prefabs, materiales, assets, .meta)
+*.unity text eol=lf
+*.prefab text eol=lf
+*.mat text eol=lf
+*.asset text eol=lf
+*.meta text eol=lf
+*.inputactions text eol=lf
+
+# Binarios
+*.ttf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.psd binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.fbx binary
+*.unitypackage binary
