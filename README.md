@@ -2,7 +2,28 @@
 
 Plataformas 3D de exploración en tercera persona para PC (Unity 6, URP). Kael, un pequeño espíritu guardián, recorre un santuario de islas flotantes y absorbe siete Fragmentos del Núcleo; cada uno reconstruye una parte del mundo hasta abrir el Portal de Salida.
 
-Proyecto del curso **Desarrollo de Videojuegos** (equipo de 2 estudiantes). Historia: `historia_de_fragmento.md`. Plan y progreso por hitos: `PLAN_FRAGMENTO.md`.
+Proyecto del curso **Desarrollo de Videojuegos** (equipo de 2 estudiantes). Historia: [`historia_de_fragmento.md`](historia_de_fragmento.md).
+
+## Tecnologías
+| Componente | Versión |
+|---|---|
+| Motor | Unity 6000.3.23f1 (Unity 6) |
+| Render | Universal Render Pipeline (URP) 17.3.0 |
+| Lenguaje | C# |
+| Input | Input System 1.20.0 |
+| Cámara | Cinemachine 3.1.7 |
+| Interfaz | Unity UI 2.0.0 + TextMeshPro |
+| Pruebas | Unity Test Framework 1.6.0 (PlayMode) |
+| Plataforma objetivo | Windows x86_64 |
+
+## Estado
+| Hito | Contenido | Estado |
+|---|---|---|
+| H1 | Prototipo: movimiento, fragmento y puente | Completado |
+| H2 | Vertical slice: HUD, respawn, escalera y plataforma móvil | Completado |
+| H3 | Mínimo completo | Pendiente |
+| H4 | Contenido | Pendiente |
+| H5 | Pulido y build | Pendiente |
 
 ## Cómo abrir el proyecto
 1. Instala **Unity 6000.3.23f1** desde Unity Hub (la versión exacta está en `ProjectSettings/ProjectVersion.txt`).

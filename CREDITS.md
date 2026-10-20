@@ -1,7 +1,7 @@
 # CREDITS
 
 Registro de todo lo que no escribió el equipo (código, assets, audio, paquetes). Es evidencia académica: cada fila debe tener la licencia verificada en la fuente.
-Para añadir una fila usa la skill `add-credit`.
+Para añadir una fila, copia el formato de la tabla y verifica la licencia en la fuente original.
 
 | Nombre | Autor | URL | Licencia | Qué se usó | Dónde (ruta en el proyecto) | Cambios hechos |
 |---|---|---|---|---|---|---|
@@ -12,7 +12,7 @@ Para añadir una fila usa la skill `add-credit`.
 | Unity UI (`com.unity.ugui` 2.0.0, incluye TextMeshPro) | Unity Technologies | Unity Package Manager | Unity Companion License for Unity-dependent projects (verificada en el `LICENSE.md` del paquete) | HUD y menús | `Packages/manifest.json` | Ninguno |
 | Unity Test Framework (`com.unity.test-framework` 1.6.0) | Unity Technologies | Unity Package Manager | Unity Companion License for Unity-dependent projects (verificada en el `LICENSE.md` del paquete) | Pruebas EditMode/PlayMode | `Packages/manifest.json` | Ninguno |
 | TextMesh Pro Essential Resources (shaders, `TMP Settings`, fuente SDF) | Unity Technologies | `Packages/com.unity.ugui/Package Resources/TMP Essential Resources.unitypackage` (incluido en el paquete `com.unity.ugui` 2.0.0) | Unity Companion License for Unity-dependent projects (paquete `com.unity.ugui`) | Dibujar el texto del HUD con TextMeshPro | `Assets/TextMesh Pro/` | Se extrajo con un script conservando los GUID; **no se incluyen los emojis de EmojiOne** (licencia sin verificar) y se quitó su referencia en `TMP Settings` |
-| Liberation Sans (`LiberationSans.ttf`) | Digitized data © 2010 Google Corporation (Arimo, Tinos, Cousine); © 2012 Red Hat, Inc. | Incluida en el mismo paquete de TextMeshPro | SIL Open Font License 1.1 (texto en `Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt`). Es una licencia permisiva de fuentes que no figura en la lista del proyecto; se acepta por venir dentro del paquete oficial aprobado (ver `decisions.md`) | Fuente por defecto del HUD | `Assets/TextMesh Pro/Fonts/` | Ninguno |
+| Liberation Sans (`LiberationSans.ttf`) | Digitized data © 2010 Google Corporation (Arimo, Tinos, Cousine); © 2012 Red Hat, Inc. | Incluida en el mismo paquete de TextMeshPro | SIL Open Font License 1.1 (texto en `Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt`). Es una licencia permisiva de fuentes que no figura en la lista del proyecto; se acepta por venir dentro del paquete oficial aprobado | Fuente por defecto del HUD | `Assets/TextMesh Pro/Fonts/` | Ninguno |
 
 ## Excluido por licencia sin verificar
 - EmojiOne (sprites de ejemplo de TextMeshPro): su archivo de atribución solo remite a su web; no se usa ni se distribuye.
