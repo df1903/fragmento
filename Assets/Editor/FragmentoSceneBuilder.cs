@@ -422,9 +422,10 @@ public static class FragmentoSceneBuilder
             bloom = profile.Add<Bloom>(true);
             AssetDatabase.AddObjectToAsset(bloom, profile);
         }
-        bloom.intensity.Override(1.0f);
-        bloom.threshold.Override(1.0f); // solo brillan los emisivos fuertes, no la piedra
-        bloom.scatter.Override(0.65f);
+        bloom.intensity.Override(0.9f);
+        bloom.threshold.Override(1.1f); // solo brillan los emisivos fuertes, no la piedra
+        bloom.scatter.Override(0.7f);
+        bloom.highQualityFiltering.Override(true);
 
         if (!profile.TryGet(out Vignette vignette))
         {
@@ -606,13 +607,18 @@ public static class FragmentoSceneBuilder
         Light light = sun.AddComponent<Light>();
         light.type = LightType.Directional;
         light.color = new Color(0.65f, 0.75f, 1f);
-        light.intensity = 0.9f;
+        light.intensity = 1.3f;
         light.shadows = LightShadows.Soft;
+        light.shadowStrength = 0.85f;
         RenderSettings.sun = light;
 
         RenderSettings.skybox = null;
-        RenderSettings.ambientMode = AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.16f, 0.19f, 0.30f);
+        // Ambiente en degradado: cielo azulado arriba, suelo violeta oscuro abajo. Da volumen a las caras
+        // que no reciben la luz direccional (con ambiente plano todo se veía "aplastado").
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = new Color(0.30f, 0.38f, 0.62f);
+        RenderSettings.ambientEquatorColor = new Color(0.20f, 0.20f, 0.38f);
+        RenderSettings.ambientGroundColor = new Color(0.10f, 0.07f, 0.18f);
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Exponential;
         RenderSettings.fogDensity = 0.0045f;
@@ -640,6 +646,11 @@ public static class FragmentoSceneBuilder
         // Sin esto el Bloom del Volume no se aplica a esta cámara.
         UniversalAdditionalCameraData urpData = cameraObject.AddComponent<UniversalAdditionalCameraData>();
         urpData.renderPostProcessing = true;
+
+        // Antialiasing de post-proceso (SMAA alta calidad) además del MSAA del asset URP: bordes sin dientes.
+        urpData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+        urpData.antialiasingQuality = AntialiasingQuality.High;
+        urpData.renderShadows = true;
     }
 
     private static void CreatePlayerCamera(Transform followTarget)

@@ -5354,12 +5354,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Fragmento::ThirdPersonCamera
   warpDistance: 6
-  mouseSensitivity: 0.12
-  stickSensitivity: 160
-  minPitch: -25
-  maxPitch: 65
-  startPitch: 20
-  lockCursor: 1
+  turnSpeed: 140
+  dragSensitivity: 0.15
+  autoTurnSpeed: 80
+  autoPause: 1.2
+  pitchLimits: {x: 8, y: 55}
+  pitch: 22
 --- !u!1 &7024607626859763250
 GameObject:
   m_ObjectHideFlags: 0
