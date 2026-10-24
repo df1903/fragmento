@@ -78,6 +78,9 @@ public class PlayerController : MonoBehaviour
     // Búfer reutilizable para no crear basura (garbage) en cada fotograma.
     private readonly Collider[] groundHits = new Collider[8];
 
+    /// <summary>Input de movimiento del último Update (x = derecha, y = adelante). Lo usa la cámara para alinearse.</summary>
+    public Vector2 MoveInput { get; private set; }
+
     /// <summary>True si Kael pisa el suelo (calculado en el último Update).</summary>
     public bool IsGrounded => isGrounded;
 
@@ -135,6 +138,8 @@ public class PlayerController : MonoBehaviour
             jumpPressed = jumpAction.WasPressedThisFrame();
             jumpReleased = jumpAction.WasReleasedThisFrame();
         }
+
+        MoveInput = input;
 
         // --- Suelo, coyote time y jump buffer ---
         isGrounded = CheckGrounded();

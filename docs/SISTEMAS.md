@@ -57,7 +57,7 @@ Código en `Assets/Scripts/` con su propio ensamblado (`Fragmento.asmdef`): comp
 ## ThirdPersonCamera + Cinemachine (`Player/ThirdPersonCamera.cs`)
 - **Qué hace:** lee ratón / stick derecho y gira el pivote `CameraTarget` (hijo de Kael); si el pivote salta más de 6 m en un fotograma (respawn) avisa a Cinemachine (`OnTargetObjectWarped`) para que la cámara salte con él. Una `CinemachineCamera` con *Third Person Follow* sigue ese pivote y copia su rotación (*Rotate With Follow Target*); evita atravesar el suelo con *Avoid Obstacles*.
 - **Por qué existe:** separa lo que quiere mirar el jugador (este script) de cómo se coloca la cámara (Cinemachine). Las cámaras de evento (H4) solo subirán su prioridad.
-- **Cómo se usa:** la escena la monta el builder. Clic en la ventana de juego captura el cursor; `Esc` lo libera.
+- **Cómo se usa:** la escena la monta el builder. La cámara acompaña sola al avanzar y girar (`W` + `A`/`D`); a mano se gira con `Q` / `E`, el stick derecho o clic derecho + ratón (el cursor se captura mientras dura el arrastre). Sin clic derecho el ratón no la mueve.
 - **Demuestra:** cámara, input.
 
 ## FragmentData / Fragment / FragmentManager (`Fragments/`)

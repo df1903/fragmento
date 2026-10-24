@@ -39,8 +39,7 @@ Proyecto del curso **Desarrollo de Videojuegos** (equipo de 2 estudiantes). Hist
 |---|---|---|
 | Mover | `W` `A` `S` `D` o flechas | Stick izquierdo |
 | Saltar | `Espacio` | Botón sur (A / ✕) |
-| Mirar | Ratón | Stick derecho |
-| Liberar el cursor | `Esc` (clic en la ventana para volver a capturarlo) | — |
+| Girar cámara | `Q` / `E`, o clic derecho + mover el ratón; también acompaña sola al avanzar y girar (`W` + `A`/`D`) | Stick derecho |
 
 ## Estructura
 - `Assets/Scripts/` — código del juego (`Core`, `Player`, `Fragments`, `WorldEvents`, `UI`).

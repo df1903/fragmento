@@ -4,8 +4,11 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// QUÉ HACE
-///   Lee el ratón / stick derecho y gira un objeto "pivote" (CameraTarget) hacia donde mira el jugador.
-///   No mueve ninguna cámara directamente.
+///   Gira un objeto "pivote" (CameraTarget) hacia donde mira la cámara. Tres formas de girarla:
+///   1) Automática: al avanzar y girar hacia un lado (W + A / W + D) la cámara acompaña a Kael.
+///   2) Manual con ratón: mantener el botón derecho y mover el ratón.
+///   3) Manual con teclado / mando: Q / E o stick derecho.
+///   Sin botón derecho el ratón NO mueve la cámara. No mueve ninguna cámara directamente.
 ///
 /// POR QUÉ EXISTE
 ///   La cámara real es una CinemachineCamera (Third Person Follow) que sigue a este pivote y copia su rotación.
@@ -15,7 +18,6 @@ using UnityEngine.InputSystem;
 /// CÓMO SE USA
 ///   Va en el objeto CameraTarget, hijo de Kael (el prefab Kael.prefab ya lo trae).
 ///   La CinemachineCamera de la escena tiene a CameraTarget como "Follow".
-///   Clic en la ventana de juego captura el cursor; Esc lo libera.
 ///   También avisa a Cinemachine cuando Kael se teletransporta (respawn) para que la cámara salte con él
 ///   en vez de cruzar el mapa "volando".
 /// </summary>
@@ -25,65 +27,76 @@ public class ThirdPersonCamera : MonoBehaviour
     [Tooltip("Si el pivote se mueve más que esto (metros) en un fotograma, se considera un teletransporte.")]
     [SerializeField] private float warpDistance = 6f;
 
-    [Tooltip("Grados que gira la cámara por cada píxel que se mueve el ratón.")]
-    [SerializeField] private float mouseSensitivity = 0.12f;
+    [Tooltip("Grados por segundo al girar con Q / E o con el stick derecho a tope.")]
+    [SerializeField] private float turnSpeed = 140f;
 
-    [Tooltip("Grados por segundo con el stick derecho a tope.")]
-    [SerializeField] private float stickSensitivity = 160f;
+    [Tooltip("Grados por píxel que se mueve el ratón mientras se mantiene el botón derecho.")]
+    [SerializeField] private float dragSensitivity = 0.15f;
 
-    [Tooltip("Límite al mirar hacia arriba (grados, negativo = mirar arriba).")]
-    [SerializeField] private float minPitch = -25f;
+    [Tooltip("Grados por segundo con los que la cámara acompaña a Kael al avanzar y girar a un lado.")]
+    [SerializeField] private float autoTurnSpeed = 80f;
 
-    [Tooltip("Límite al mirar hacia abajo (grados).")]
-    [SerializeField] private float maxPitch = 65f;
+    [Tooltip("Segundos sin giro automático después de mover la cámara a mano.")]
+    [SerializeField] private float autoPause = 1.2f;
+
+    [Tooltip("Inclinación mínima y máxima de la cámara al arrastrar con el ratón (grados hacia abajo).")]
+    [SerializeField] private Vector2 pitchLimits = new Vector2(8f, 55f);
 
     [Tooltip("Inclinación inicial de la cámara (grados hacia abajo).")]
-    [SerializeField] private float startPitch = 20f;
+    [SerializeField] private float pitch = 22f;
 
-    [Tooltip("Capturar y ocultar el cursor al jugar.")]
-    [SerializeField] private bool lockCursor = true;
-
-    private InputAction mouseLookAction;
-    private InputAction stickLookAction;
+    private InputAction turnAction;
+    private InputAction dragAction;
+    private InputAction lookAction;
+    private PlayerController player;
     private float yaw;
-    private float pitch;
+    private float manualTimer;
+    private bool dragging;
     private bool inputLocked;
     private Vector3 lastPosition;
 
     private void Awake()
     {
-        mouseLookAction = new InputAction("MouseLook", InputActionType.Value, "<Mouse>/delta");
-        stickLookAction = new InputAction("StickLook", InputActionType.Value, "<Gamepad>/rightStick");
+        turnAction = new InputAction("CameraTurn", InputActionType.Value);
+        turnAction.AddCompositeBinding("1DAxis")
+            .With("Negative", "<Keyboard>/q")
+            .With("Positive", "<Keyboard>/e");
+        turnAction.AddBinding("<Gamepad>/rightStick/x");
+
+        dragAction = new InputAction("CameraDrag", InputActionType.Button, "<Mouse>/rightButton");
+        lookAction = new InputAction("CameraLook", InputActionType.Value, "<Mouse>/delta");
     }
 
     private void OnEnable()
     {
-        mouseLookAction.Enable();
-        stickLookAction.Enable();
+        turnAction.Enable();
+        dragAction.Enable();
+        lookAction.Enable();
         GameEvents.CinematicStarted += LockInput;
         GameEvents.CinematicEnded += UnlockInput;
-        SetCursorLocked(lockCursor);
     }
 
     private void OnDisable()
     {
-        mouseLookAction.Disable();
-        stickLookAction.Disable();
+        turnAction.Disable();
+        dragAction.Disable();
+        lookAction.Disable();
         GameEvents.CinematicStarted -= LockInput;
         GameEvents.CinematicEnded -= UnlockInput;
-        SetCursorLocked(false);
+        SetDragging(false);
     }
 
     private void OnDestroy()
     {
-        mouseLookAction.Dispose();
-        stickLookAction.Dispose();
+        turnAction.Dispose();
+        dragAction.Dispose();
+        lookAction.Dispose();
     }
 
     private void Start()
     {
+        player = GetComponentInParent<PlayerController>();
         yaw = transform.eulerAngles.y;
-        pitch = startPitch;
         lastPosition = transform.position;
         ApplyRotation();
     }
@@ -97,30 +110,46 @@ public class ThirdPersonCamera : MonoBehaviour
         }
         lastPosition = transform.position;
 
-        // Durante un evento o la pantalla final no se toca ni el giro ni el cursor.
+        // Durante un evento o la pantalla final no se toca el giro.
         if (inputLocked)
         {
+            SetDragging(false);
             return;
         }
 
-        // Si el cursor fue liberado (Esc), un clic en la ventana lo vuelve a capturar.
-        bool cursorLocked = Cursor.lockState == CursorLockMode.Locked;
-        if (lockCursor && !cursorLocked && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        float manualYaw = turnAction.ReadValue<float>() * turnSpeed * Time.deltaTime;
+
+        // Arrastre con botón derecho: el cursor se captura mientras dura y se libera al soltar.
+        SetDragging(dragAction.IsPressed());
+        if (dragging)
         {
-            SetCursorLocked(true);
-            return;
+            Vector2 look = lookAction.ReadValue<Vector2>() * dragSensitivity;
+            manualYaw += look.x;
+            pitch = Mathf.Clamp(pitch - look.y, pitchLimits.x, pitchLimits.y);
         }
 
-        // El delta del ratón ya viene "por fotograma", el stick no: por eso solo este se multiplica por el tiempo.
-        Vector2 look = Vector2.zero;
-        if (cursorLocked || !lockCursor)
+        if (Mathf.Abs(manualYaw) > 0.001f || dragging)
         {
-            look += mouseLookAction.ReadValue<Vector2>() * mouseSensitivity;
+            manualTimer = autoPause;
         }
-        look += stickLookAction.ReadValue<Vector2>() * (stickSensitivity * Time.deltaTime);
+        else
+        {
+            manualTimer -= Time.deltaTime;
+        }
 
-        yaw += look.x;
-        pitch = Mathf.Clamp(pitch - look.y, minPitch, maxPitch);
+        yaw += manualYaw;
+
+        // Giro automático: solo al avanzar (W) y a la vez ir a un lado (A / D). Con A / D solos (strafe)
+        // o retrocediendo no gira, para que Kael no dé vueltas sin querer.
+        if (manualTimer <= 0f && player != null)
+        {
+            Vector2 input = player.MoveInput;
+            if (input.y > 0.1f)
+            {
+                yaw += input.x * input.y * autoTurnSpeed * Time.deltaTime;
+            }
+        }
+
         ApplyRotation();
     }
 
@@ -129,15 +158,16 @@ public class ThirdPersonCamera : MonoBehaviour
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
     }
 
-    private void SetCursorLocked(bool locked)
+    private void SetDragging(bool value)
     {
-        if (!lockCursor && locked)
+        if (dragging == value)
         {
             return;
         }
 
-        Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
-        Cursor.visible = !locked;
+        dragging = value;
+        Cursor.lockState = value ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible = !value;
     }
 
     private void LockInput() => inputLocked = true;
