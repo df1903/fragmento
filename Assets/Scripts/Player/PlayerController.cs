@@ -22,7 +22,13 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Movimiento")]
     [Tooltip("Velocidad al caminar, en metros por segundo.")]
-    [SerializeField] private float moveSpeed = 6f;
+    [SerializeField] private float moveSpeed = 7f;
+
+    [Tooltip("Aceleración en el suelo (m/s²): qué tan rápido alcanza la velocidad máxima.")]
+    [SerializeField] private float groundAcceleration = 50f;
+
+    [Tooltip("Aceleración en el aire (m/s²): menor que en el suelo, pero suficiente para corregir el salto.")]
+    [SerializeField] private float airAcceleration = 25f;
 
     [Tooltip("Objeto visual de Kael. Gira hacia donde camina (la raíz no gira, para no mover la cámara).")]
     [SerializeField] private Transform visual;
@@ -36,6 +42,12 @@ public class PlayerController : MonoBehaviour
 
     [Tooltip("Gravedad (negativa). Más alta que la real para que el salto se sienta ágil.")]
     [SerializeField] private float gravity = -25f;
+
+    [Tooltip("Al caer, la gravedad se multiplica por esto: la caída es más rápida que la subida y se siente con peso.")]
+    [SerializeField] private float fallGravityMultiplier = 1.4f;
+
+    [Tooltip("Si se suelta el salto mientras se sube, la velocidad vertical se multiplica por esto (salto corto).")]
+    [SerializeField] private float jumpCutMultiplier = 0.5f;
 
     [Tooltip("Velocidad máxima de caída.")]
     [SerializeField] private float maxFallSpeed = -40f;
@@ -56,6 +68,7 @@ public class PlayerController : MonoBehaviour
     private InputAction jumpAction;
 
     private float verticalVelocity;
+    private Vector3 horizontalVelocity;
     private float timeSinceGrounded = 999f;
     private float timeSinceJumpPressed = 999f;
     private bool inputLocked;
@@ -67,6 +80,9 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>True si Kael pisa el suelo (calculado en el último Update).</summary>
     public bool IsGrounded => isGrounded;
+
+    /// <summary>True mientras un evento o cámara de evento le quita el control (para pruebas y depuración).</summary>
+    public bool IsInputLocked => inputLocked;
 
     /// <summary>Collider que Kael pisa ahora (null en el aire). Lo usa <see cref="MovingPlatformCarrier"/>.</summary>
     public Collider GroundCollider => groundCollider;
@@ -112,10 +128,12 @@ public class PlayerController : MonoBehaviour
 
         Vector2 input = Vector2.zero;
         bool jumpPressed = false;
+        bool jumpReleased = false;
         if (!inputLocked)
         {
             input = Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f);
             jumpPressed = jumpAction.WasPressedThisFrame();
+            jumpReleased = jumpAction.WasReleasedThisFrame();
         }
 
         // --- Suelo, coyote time y jump buffer ---
@@ -142,11 +160,20 @@ public class PlayerController : MonoBehaviour
             timeSinceJumpPressed = 999f;   // el buffer se gasta
         }
 
-        verticalVelocity = Mathf.Max(verticalVelocity + gravity * dt, maxFallSpeed);
+        // Salto variable: soltar el botón en la subida lo acorta (toque = salto bajo, mantener = salto completo).
+        if (jumpReleased && verticalVelocity > 0f)
+        {
+            verticalVelocity *= jumpCutMultiplier;
+        }
 
-        // --- Movimiento horizontal relativo a la cámara ---
+        float gravityScale = verticalVelocity < 0f ? fallGravityMultiplier : 1f;
+        verticalVelocity = Mathf.Max(verticalVelocity + gravity * gravityScale * dt, maxFallSpeed);
+
+        // --- Movimiento horizontal relativo a la cámara, con aceleración suave ---
         Vector3 moveDirection = CameraRelativeDirection(input);
-        Vector3 velocity = moveDirection * moveSpeed + Vector3.up * verticalVelocity;
+        float acceleration = isGrounded ? groundAcceleration : airAcceleration;
+        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, moveDirection * moveSpeed, acceleration * dt);
+        Vector3 velocity = horizontalVelocity + Vector3.up * verticalVelocity;
         controller.Move(velocity * dt);
 
         RotateVisual(moveDirection, dt);
@@ -163,6 +190,7 @@ public class PlayerController : MonoBehaviour
         controller.enabled = true;
 
         verticalVelocity = 0f;
+        horizontalVelocity = Vector3.zero;
         timeSinceGrounded = 999f;
         timeSinceJumpPressed = 999f;
         isGrounded = false;

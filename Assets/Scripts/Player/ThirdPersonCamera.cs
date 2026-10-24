@@ -38,7 +38,7 @@ public class ThirdPersonCamera : MonoBehaviour
     [SerializeField] private float maxPitch = 65f;
 
     [Tooltip("Inclinación inicial de la cámara (grados hacia abajo).")]
-    [SerializeField] private float startPitch = 15f;
+    [SerializeField] private float startPitch = 20f;
 
     [Tooltip("Capturar y ocultar el cursor al jugar.")]
     [SerializeField] private bool lockCursor = true;
@@ -97,16 +97,17 @@ public class ThirdPersonCamera : MonoBehaviour
         }
         lastPosition = transform.position;
 
+        // Durante un evento o la pantalla final no se toca ni el giro ni el cursor.
+        if (inputLocked)
+        {
+            return;
+        }
+
         // Si el cursor fue liberado (Esc), un clic en la ventana lo vuelve a capturar.
         bool cursorLocked = Cursor.lockState == CursorLockMode.Locked;
         if (lockCursor && !cursorLocked && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
             SetCursorLocked(true);
-            return;
-        }
-
-        if (inputLocked)
-        {
             return;
         }
 

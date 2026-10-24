@@ -49,6 +49,18 @@ public static class GameEvents
     /// <summary>Hay que devolver a Kael a esta posición (lo lanza <see cref="RespawnManager"/>).</summary>
     public static event Action<Vector3> PlayerRespawned;
 
+    /// <summary>El Núcleo quedó restaurado en el pedestal (lo lanza <see cref="CoreRestoration"/>).</summary>
+    public static event Action CoreRestored;
+
+    /// <summary>Kael cruzó el Portal de Salida (lo lanza <see cref="ExitPortal"/>).</summary>
+    public static event Action LevelCompleted;
+
+    /// <summary>Un evento de mundo pide una cámara breve que mire a este objeto durante N segundos.</summary>
+    public static event Action<Transform, float> EventShotRequested;
+
+    public static void RaiseCoreRestored() => CoreRestored?.Invoke();
+    public static void RaiseLevelCompleted() => LevelCompleted?.Invoke();
+    public static void RaiseEventShotRequested(Transform focus, float seconds) => EventShotRequested?.Invoke(focus, seconds);
     public static void RaiseFragmentCollected(FragmentData data) => FragmentCollected?.Invoke(data);
     public static void RaiseFragmentCountChanged(int collected, int total) => FragmentCountChanged?.Invoke(collected, total);
     public static void RaiseWorldEventRequested(string eventId) => WorldEventRequested?.Invoke(eventId);
@@ -77,5 +89,8 @@ public static class GameEvents
         PlayerFell = null;
         CheckpointReached = null;
         PlayerRespawned = null;
+        CoreRestored = null;
+        LevelCompleted = null;
+        EventShotRequested = null;
     }
 }

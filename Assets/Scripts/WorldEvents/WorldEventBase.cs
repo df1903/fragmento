@@ -26,6 +26,15 @@ public abstract class WorldEventBase : MonoBehaviour
     [Tooltip("Si está marcado, el jugador no puede moverse mientras dura la animación.")]
     [SerializeField] private bool lockPlayerDuringEvent = false;
 
+    [Tooltip("Opcional: objeto que mira la cámara breve de evento. Si está vacío, no hay cámara de evento.")]
+    [SerializeField] private Transform cameraFocus;
+
+    [Tooltip("Segundos que dura la cámara de evento.")]
+    [SerializeField] private float cameraShotSeconds = 3f;
+
+    [Tooltip("Opcional: partículas que se lanzan al empezar el evento.")]
+    [SerializeField] private ParticleSystem burst;
+
     private bool hasRun;
 
     public string EventId => eventId;
@@ -64,6 +73,16 @@ public abstract class WorldEventBase : MonoBehaviour
         if (lockPlayerDuringEvent)
         {
             GameEvents.RaiseCinematicStarted();
+        }
+
+        if (burst != null)
+        {
+            burst.Play();
+        }
+
+        if (cameraFocus != null)
+        {
+            GameEvents.RaiseEventShotRequested(cameraFocus, cameraShotSeconds);
         }
 
         yield return Run();
