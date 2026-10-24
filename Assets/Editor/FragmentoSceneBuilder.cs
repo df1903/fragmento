@@ -193,8 +193,18 @@ public static class FragmentoSceneBuilder
         material.SetColor("_BaseColor", baseColor);
         material.SetFloat("_Surface", 1f);   // 1 = Transparent
         material.SetFloat("_Blend", 0f);     // 0 = mezcla alfa normal
-        material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        // El shader Lit de URP multiplica el color por el alfa dentro del shader (premultiplicado), así que
+        // su mezcla es One / OneMinusSrcAlpha; con SrcAlpha el alfa se aplicaría dos veces y se vería casi invisible.
+        // Los shaders de partículas sí usan SrcAlpha.
+        bool isLit = shaderName.EndsWith("/Lit");
+        material.SetFloat("_SrcBlend", (float)(isLit ? BlendMode.One : BlendMode.SrcAlpha));
         material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+        material.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+        if (isLit)
+        {
+            material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+        }
         material.SetFloat("_ZWrite", 0f);
         material.SetFloat("_Cull", drawInside ? 1f : 2f); // 1 = dibuja las caras interiores (se ve desde dentro)
         material.SetOverrideTag("RenderType", "Transparent");
