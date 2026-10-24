@@ -59,7 +59,8 @@ public class PrototipoH1Tests : LevelTestBase
         {
             elapsed += Time.deltaTime;
             maxY = Mathf.Max(maxY, player.transform.position.y);
-            if (elapsed > 0.1f)
+            // Se mantiene pulsado más que lo que dura la subida (≈ 0.38 s): soltar antes acorta el salto.
+            if (elapsed > 0.6f)
             {
                 Release(keyboard.spaceKey);
             }
@@ -110,7 +111,7 @@ public class PrototipoH1Tests : LevelTestBase
         Assert.Greater(cameraTransform.position.y, 0.5f, "La cámara no debe quedar a ras del suelo ni por debajo.");
         Assert.Less(cameraTransform.position.z, kaelPosition.z - 2f, "La cámara debe estar detrás (al sur) de Kael.");
         float distance = Vector3.Distance(cameraTransform.position, kaelPosition + Vector3.up);
-        Assert.That(distance, Is.InRange(3f, 7f), "La cámara debe estar a unos 5 m de Kael.");
+        Assert.That(distance, Is.InRange(3f, 8f), "La cámara debe estar a unos 6.5 m de Kael.");
     }
 
     // ------------------------------------------------------------------ Fragmento 1 y puente
@@ -123,7 +124,7 @@ public class PrototipoH1Tests : LevelTestBase
 
         FragmentManager manager = Object.FindFirstObjectByType<FragmentManager>();
         Fragment fragment = FindFragment(1);
-        BridgeAppear bridge = Object.FindFirstObjectByType<BridgeAppear>();
+        BridgeAppear bridge = FindBridge("Puente de luz 1");
         Assert.IsNotNull(manager);
         Assert.IsNotNull(fragment);
         Assert.IsNotNull(bridge);
@@ -184,7 +185,7 @@ public class PrototipoH1Tests : LevelTestBase
     {
         yield return LoadLevel();
         GameEvents.RaiseWorldEventRequested("puente_1");
-        yield return new WaitForSeconds(2.5f);
+        yield return WaitForControl(2.5f);
 
         Teleport(new Vector3(0f, 0.05f, 11f));
         yield return new WaitForSeconds(0.3f);

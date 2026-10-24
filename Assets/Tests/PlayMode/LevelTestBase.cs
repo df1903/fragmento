@@ -52,6 +52,24 @@ public abstract class LevelTestBase : InputTestFixture
         controller = player.GetComponent<CharacterController>();
     }
 
+    /// <summary>
+    /// Espera al menos "minSeconds" y luego hasta que Kael recupere el control (las cámaras de evento se lo quitan
+    /// unos segundos). Llamar después de recoger un fragmento y antes de pulsar teclas.
+    /// </summary>
+    protected IEnumerator WaitForControl(float minSeconds)
+    {
+        yield return new WaitForSeconds(minSeconds);
+
+        float timeout = 15f;
+        while (player.IsInputLocked && timeout > 0f)
+        {
+            timeout -= Time.deltaTime;
+            yield return null;
+        }
+        Assert.Greater(timeout, 0f, "Kael no recuperó el control tras el evento.");
+        yield return new WaitForSeconds(0.1f);
+    }
+
     protected void Teleport(Vector3 position)
     {
         player.TeleportTo(position);
@@ -65,6 +83,20 @@ public abstract class LevelTestBase : InputTestFixture
             if (fragment.Data != null && fragment.Data.Id == id)
             {
                 return fragment;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Busca un puente por el nombre de su objeto ("Puente de luz 1", "Puente de luz 5").</summary>
+    protected static BridgeAppear FindBridge(string objectName)
+    {
+        foreach (BridgeAppear bridge in Object.FindObjectsByType<BridgeAppear>(FindObjectsSortMode.None))
+        {
+            if (bridge.name == objectName)
+            {
+                return bridge;
             }
         }
 

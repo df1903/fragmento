@@ -52,14 +52,16 @@ public class VerticalSliceH2Tests : LevelTestBase
         Assert.AreEqual(20, stairs.StepCount);
         foreach (Transform step in stairs.transform)
         {
+            if (!step.name.StartsWith("Escalon")) continue; // también cuelgan las partículas del evento
             Assert.IsFalse(step.gameObject.activeSelf, "Antes del fragmento 2 no debe haber escalones.");
         }
 
         CollectFragment(2);
-        yield return new WaitForSeconds(4f);
+        yield return WaitForControl(4f);
 
         foreach (Transform step in stairs.transform)
         {
+            if (!step.name.StartsWith("Escalon")) continue;
             Assert.IsTrue(step.gameObject.activeSelf, "Todos los escalones deben haber aparecido.");
             Assert.IsTrue(step.GetComponent<Collider>().enabled, "Cada escalón debe ser sólido al terminar.");
         }
@@ -179,7 +181,7 @@ public class VerticalSliceH2Tests : LevelTestBase
 
         // Fragmento 1 y puente de A a B.
         CollectFragment(1);
-        yield return new WaitForSeconds(3f);
+        yield return WaitForControl(3f);
         Teleport(new Vector3(0f, 0.05f, 11f));
         yield return new WaitForSeconds(0.3f);
         Press(keyboard.wKey);
@@ -189,7 +191,7 @@ public class VerticalSliceH2Tests : LevelTestBase
 
         // Fragmento 2 y escalera de B a C.
         CollectFragment(2);
-        yield return new WaitForSeconds(4f);
+        yield return WaitForControl(4f);
         Teleport(new Vector3(13f, 0.05f, 45f));
         yield return new WaitForSeconds(0.5f);
         Press(keyboard.dKey);
@@ -199,7 +201,7 @@ public class VerticalSliceH2Tests : LevelTestBase
 
         // Fragmento 3 y plataforma móvil de C a D.
         CollectFragment(3);
-        yield return new WaitForSeconds(1.2f);
+        yield return WaitForControl(1.2f);
         MovingPlatformActivate platform = Object.FindFirstObjectByType<MovingPlatformActivate>();
         Teleport(platform.transform.position + Vector3.up * 0.4f);
 
