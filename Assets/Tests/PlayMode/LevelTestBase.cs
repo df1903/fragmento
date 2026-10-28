@@ -19,7 +19,8 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public abstract class LevelTestBase : InputTestFixture
 {
-    protected const string LevelScene = "Nivel01_Santuario";
+    /// <summary>Escena que carga LoadLevel. Las pruebas de otro nivel sobrescriben esta propiedad.</summary>
+    protected virtual string LevelScene => "Nivel01_Santuario";
 
     protected Keyboard keyboard;
     protected PlayerController player;
@@ -43,10 +44,30 @@ public abstract class LevelTestBase : InputTestFixture
         base.TearDown();
     }
 
-    protected IEnumerator LoadLevel()
+    protected IEnumerator LoadLevel(bool enemiesEnabled = false, bool livesEnabled = false)
     {
+        PlayerProgress.Reset(); // el progreso es estático: cada prueba empieza como una partida nueva
         yield return SceneManager.LoadSceneAsync(LevelScene);
         yield return null;
+
+        // Los peligros matan a Kael y arruinarían las pruebas de recorrido: se apagan salvo que se pidan.
+        if (!enemiesEnabled)
+        {
+            foreach (Hazard hazard in Object.FindObjectsByType<Hazard>(FindObjectsSortMode.None))
+            {
+                hazard.enabled = false;
+            }
+        }
+
+        // Las vidas recargarían la escena a mitad de prueba (algunas lanzan PlayerDied muchas veces).
+        if (!livesEnabled)
+        {
+            foreach (LivesManager lives in Object.FindObjectsByType<LivesManager>(FindObjectsSortMode.None))
+            {
+                lives.enabled = false;
+            }
+        }
+
         player = Object.FindFirstObjectByType<PlayerController>();
         Assert.IsNotNull(player, "No hay un PlayerController en la escena. ¿Ejecutaste Fragmento > Construir Escena?");
         controller = player.GetComponent<CharacterController>();
