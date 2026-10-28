@@ -129,7 +129,7 @@ public class VerticalSliceH2Tests : LevelTestBase
     // ------------------------------------------------------------------ Respawn
 
     [UnityTest]
-    public IEnumerator Al_caer_Kael_reaparece_en_el_ultimo_checkpoint()
+    public IEnumerator Al_caer_Kael_reaparece_en_el_inicio_aunque_haya_pisado_otra_isla()
     {
         yield return LoadLevel();
         yield return new WaitForSeconds(0.5f);
@@ -150,7 +150,7 @@ public class VerticalSliceH2Tests : LevelTestBase
         GameEvents.PlayerRespawned -= counter;
 
         Assert.AreEqual(1, respawns, "Debe haber exactamente un respawn.");
-        Assert.Less(Vector3.Distance(player.transform.position, new Vector3(0f, 0.05f, 34f)), 1.5f, "Kael debe reaparecer en el punto de la isla B.");
+        Assert.Less(Vector3.Distance(player.transform.position, new Vector3(0f, 0.05f, -10f)), 1.5f, "Kael debe reaparecer en el inicio del nivel, aunque haya pisado la isla B.");
         Assert.IsTrue(player.IsGrounded);
         Assert.Less(Vector3.Distance(Camera.main.transform.position, player.transform.position), 8f, "La cámara debe haber saltado con Kael.");
     }

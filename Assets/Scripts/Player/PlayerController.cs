@@ -81,6 +81,12 @@ public class PlayerController : MonoBehaviour
     /// <summary>Input de movimiento del último Update (x = derecha, y = adelante). Lo usa la cámara para alinearse.</summary>
     public Vector2 MoveInput { get; private set; }
 
+    /// <summary>Multiplicador de velocidad al caminar (lo sube <see cref="PlayerPowerUp"/> con cada muerte).</summary>
+    public float SpeedMultiplier { get; set; } = 1f;
+
+    /// <summary>Multiplicador de altura de salto (lo sube <see cref="PlayerPowerUp"/> con cada muerte).</summary>
+    public float JumpMultiplier { get; set; } = 1f;
+
     /// <summary>True si Kael pisa el suelo (calculado en el último Update).</summary>
     public bool IsGrounded => isGrounded;
 
@@ -160,7 +166,7 @@ public class PlayerController : MonoBehaviour
 
         if (timeSinceGrounded <= coyoteTime && timeSinceJumpPressed <= jumpBufferTime)
         {
-            verticalVelocity = Mathf.Sqrt(2f * -gravity * jumpHeight); // v = raíz(2·g·h)
+            verticalVelocity = Mathf.Sqrt(2f * -gravity * jumpHeight * JumpMultiplier); // v = raíz(2·g·h)
             timeSinceGrounded = 999f;      // el coyote time se gasta: no hay doble salto
             timeSinceJumpPressed = 999f;   // el buffer se gasta
         }
@@ -177,7 +183,7 @@ public class PlayerController : MonoBehaviour
         // --- Movimiento horizontal relativo a la cámara, con aceleración suave ---
         Vector3 moveDirection = CameraRelativeDirection(input);
         float acceleration = isGrounded ? groundAcceleration : airAcceleration;
-        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, moveDirection * moveSpeed, acceleration * dt);
+        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, moveDirection * moveSpeed * SpeedMultiplier, acceleration * dt);
         Vector3 velocity = horizontalVelocity + Vector3.up * verticalVelocity;
         controller.Move(velocity * dt);
 

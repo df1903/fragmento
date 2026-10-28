@@ -43,6 +43,12 @@ public static class GameEvents
     /// <summary>Kael cayó al vacío (lo lanza <see cref="KillZone"/>).</summary>
     public static event Action PlayerFell;
 
+    /// <summary>Cambiaron las vidas: (actuales, máximas). Lo lanza <see cref="LivesManager"/>.</summary>
+    public static event Action<int, int> LivesChanged;
+
+    /// <summary>Kael murió por cualquier causa (caída o enemigo). <see cref="RespawnManager"/> lo devuelve al checkpoint.</summary>
+    public static event Action PlayerDied;
+
     /// <summary>Kael pisó una isla nueva: este es su punto de reaparición (lo lanza <see cref="CheckpointZone"/>).</summary>
     public static event Action<Vector3> CheckpointReached;
 
@@ -68,7 +74,15 @@ public static class GameEvents
     public static void RaiseCinematicStarted() => CinematicStarted?.Invoke();
     public static void RaiseCinematicEnded() => CinematicEnded?.Invoke();
     public static void RaiseMessageRequested(string message) => MessageRequested?.Invoke(message);
-    public static void RaisePlayerFell() => PlayerFell?.Invoke();
+    public static void RaisePlayerDied() => PlayerDied?.Invoke();
+    public static void RaiseLivesChanged(int current, int max) => LivesChanged?.Invoke(current, max);
+
+    // Caer al vacío también es una muerte: se avisa de las dos cosas.
+    public static void RaisePlayerFell()
+    {
+        PlayerFell?.Invoke();
+        PlayerDied?.Invoke();
+    }
     public static void RaiseCheckpointReached(Vector3 position) => CheckpointReached?.Invoke(position);
     public static void RaisePlayerRespawned(Vector3 position) => PlayerRespawned?.Invoke(position);
 
@@ -87,6 +101,8 @@ public static class GameEvents
         CinematicEnded = null;
         MessageRequested = null;
         PlayerFell = null;
+        PlayerDied = null;
+        LivesChanged = null;
         CheckpointReached = null;
         PlayerRespawned = null;
         CoreRestored = null;

@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// QUÉ HACE
-///   Recuerda el último checkpoint que pisó Kael y, cuando Kael cae, ordena devolverlo allí
+///   Recuerda el último checkpoint que pisó Kael y, cuando Kael muere (caída o enemigo), ordena devolverlo allí
 ///   (GameEvents.PlayerRespawned).
 ///
 /// POR QUÉ EXISTE
@@ -34,13 +34,13 @@ public class RespawnManager : MonoBehaviour
     private void OnEnable()
     {
         GameEvents.CheckpointReached += OnCheckpointReached;
-        GameEvents.PlayerFell += OnPlayerFell;
+        GameEvents.PlayerDied += OnPlayerDied;
     }
 
     private void OnDisable()
     {
         GameEvents.CheckpointReached -= OnCheckpointReached;
-        GameEvents.PlayerFell -= OnPlayerFell;
+        GameEvents.PlayerDied -= OnPlayerDied;
     }
 
     private void OnCheckpointReached(Vector3 position)
@@ -48,8 +48,9 @@ public class RespawnManager : MonoBehaviour
         lastCheckpoint = position;
     }
 
-    private void OnPlayerFell()
+    private void OnPlayerDied()
     {
-        GameEvents.RaisePlayerRespawned(lastCheckpoint);
+        // Dificultad por reintentos: toda muerte devuelve al inicio del nivel, no al último checkpoint.
+        GameEvents.RaisePlayerRespawned(initialSpawn != null ? initialSpawn.position : lastCheckpoint);
     }
 }
