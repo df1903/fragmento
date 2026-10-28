@@ -8,6 +8,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Nivel01_Santuario.unity
     guid: 1c7813de2b4cde14abba5f4adc3f7c9a
+  - enabled: 1
+    path: Assets/Scenes/Nivel02_Cavernas.unity
+    guid: 03effe699e6d3954e9713b00a53233ff
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

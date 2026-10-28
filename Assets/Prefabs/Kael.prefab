@@ -5068,6 +5068,7 @@ GameObject:
   - component: {fileID: 1324667011826121501}
   - component: {fileID: 7041800640483123382}
   - component: {fileID: 6096302576184022128}
+  - component: {fileID: 1301026602576585923}
   m_Layer: 0
   m_Name: Kael
   m_TagString: Player
@@ -5158,6 +5159,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47b2e8a2e8b1fe444be287cad75d2245, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Fragmento::MovingPlatformCarrier
+--- !u!114 &1301026602576585923
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4633298180025495470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 245119d7e25a4c141a650a2554d3e754, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fragmento::PlayerPowerUp
+  speedBonusPerDeath: 0.08
+  maxSpeedBonus: 0.6
+  jumpBonusPerDeath: 0.06
+  maxJumpBonus: 0.4
 --- !u!1 &6315263762164483636
 GameObject:
   m_ObjectHideFlags: 0
