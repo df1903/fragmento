@@ -1,5 +1,8 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// QUÉ HACE
@@ -12,7 +15,8 @@ using UnityEngine;
 ///
 /// CÓMO SE USA
 ///   Va en el Canvas del HUD, con un panel hijo (con CanvasGroup) que empieza oculto. Fragmento > Construir
-///   Escena lo crea. Por ahora no hay botón: el menú principal llega en el siguiente bloque de H3.
+///   Escena lo crea. Si "Next Scene Name" no está vacío, al terminar el fundido aparece "Pulsa Enter para
+///   continuar" y esa tecla carga el siguiente nivel (debe estar en Build Settings).
 /// </summary>
 public class EndScreen : MonoBehaviour
 {
@@ -21,6 +25,14 @@ public class EndScreen : MonoBehaviour
 
     [Tooltip("Segundos que tarda el panel en aparecer.")]
     [SerializeField] private float fadeSeconds = 1.5f;
+
+    [Tooltip("Escena del siguiente nivel. Vacío = no hay siguiente (se queda en la pantalla final).")]
+    [SerializeField] private string nextSceneName = "";
+
+    [Tooltip("Texto 'Pulsa Enter para continuar' (opcional).")]
+    [SerializeField] private TMP_Text continueHint;
+
+    private bool canContinue;
 
     /// <summary>True cuando el panel ya se mostró (para pruebas y depuración).</summary>
     public bool IsShown { get; private set; }
@@ -31,6 +43,21 @@ public class EndScreen : MonoBehaviour
         {
             panel.alpha = 0f;
             panel.gameObject.SetActive(false);
+        }
+
+        if (continueHint != null)
+        {
+            continueHint.gameObject.SetActive(false);
+        }
+    }
+
+    private void Update()
+    {
+        if (canContinue && Keyboard.current != null &&
+            (Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.numpadEnterKey.wasPressedThisFrame))
+        {
+            canContinue = false;
+            SceneManager.LoadScene(nextSceneName);
         }
     }
 
@@ -69,5 +96,14 @@ public class EndScreen : MonoBehaviour
             yield return null;
         }
         panel.alpha = 1f;
+
+        if (!string.IsNullOrEmpty(nextSceneName))
+        {
+            if (continueHint != null)
+            {
+                continueHint.gameObject.SetActive(true);
+            }
+            canContinue = true;
+        }
     }
 }
