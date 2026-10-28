@@ -27,7 +27,7 @@ using UnityEngine.UI;
 ///   AVISO: la escena se SOBRESCRIBE. Los cambios compartidos se hacen aquí o en los prefabs, no en la escena.
 ///   Necesita los recursos esenciales de TextMeshPro (carpeta Assets/TextMesh Pro, ya incluida en el repositorio).
 /// </summary>
-public static class FragmentoSceneBuilder
+public static partial class FragmentoSceneBuilder
 {
     private const string ScenePath = "Assets/Scenes/Nivel01_Santuario.unity";
     private const string MaterialsFolder = "Assets/Materials";
@@ -139,6 +139,7 @@ public static class FragmentoSceneBuilder
         public Material Marker;
         public Material Trail;
         public Material Star;
+        public Material Enemy;
     }
 
     // Paleta: cian/blanco brillante es SOLO de Kael. La luz del mundo es violeta; los fragmentos, ámbar.
@@ -169,6 +170,8 @@ public static class FragmentoSceneBuilder
             Marker = GetOrCreateTransparentMaterial("MarcadorKael", "Universal Render Pipeline/Lit", new Color(0.5f, 0.95f, 1f, 0.35f), new Color(0.3f, 0.9f, 1f), 1.5f, false),
             Trail = GetOrCreateTransparentMaterial("EstelaKael", "Universal Render Pipeline/Particles/Unlit", new Color(0.5f, 0.95f, 1f, 0.6f), null, 0f, false),
             Star = GetOrCreateTransparentMaterial("Estrella", "Universal Render Pipeline/Particles/Unlit", new Color(2.2f, 2.2f, 2.6f, 1f), null, 0f, false),
+            // Rojo puro: solo lo usan los enemigos, para que se lean como peligro frente al violeta/cian.
+            Enemy = GetOrCreateMaterial("EnemigoRojo", new Color(0.8f, 0.05f, 0.05f), new Color(1f, 0.1f, 0.05f), 3.5f, 0.5f),
         };
     }
 
@@ -284,7 +287,7 @@ public static class FragmentoSceneBuilder
 
     // ------------------------------------------------------------------ Prefabs
 
-    private static GameObject CreateKaelPrefab(Materials materials)
+    private static GameObject CreateKaelPrefab(Materials materials, string prefabName = "Kael", bool withRings = false)
     {
         Material bodyMaterial = materials.Kael;
         GameObject root = new GameObject("Kael");
@@ -318,6 +321,11 @@ public static class FragmentoSceneBuilder
         halo.transform.localScale = Vector3.one * 1.25f;
         halo.GetComponent<Renderer>().sharedMaterial = materials.Halo;
         Object.DestroyImmediate(halo.GetComponent<Collider>());
+
+        if (withRings)
+        {
+            CreateOrbitRings(visual.transform, materials.Trail);
+        }
 
         // Estela: deja un rastro cian al moverse; ayuda a seguir a Kael con la vista.
         GameObject trailObject = new GameObject("Estela");
@@ -370,8 +378,56 @@ public static class FragmentoSceneBuilder
         serialized.ApplyModifiedPropertiesWithoutUndo();
 
         root.AddComponent<MovingPlatformCarrier>();
+        root.AddComponent<PlayerPowerUp>();
 
-        return SavePrefab(root, "Kael");
+        return SavePrefab(root, prefabName);
+    }
+
+    // Dos anillos de luz inclinados que giran alrededor del cuerpo de Kael (ver OrbitRings). Nivel 2 en adelante.
+    private static void CreateOrbitRings(Transform visual, Material ringMaterial)
+    {
+        GameObject rings = new GameObject("Anillos");
+        rings.transform.SetParent(visual, false);
+        rings.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+
+        Transform ringA = CreateRing("AnilloA", rings.transform, 0.78f, new Vector3(65f, 0f, 0f), ringMaterial);
+        Transform ringB = CreateRing("AnilloB", rings.transform, 0.95f, new Vector3(-50f, 0f, 35f), ringMaterial);
+
+        OrbitRings orbit = rings.AddComponent<OrbitRings>();
+        SerializedObject serialized = new SerializedObject(orbit);
+        Property(serialized, "ringA").objectReferenceValue = ringA;
+        Property(serialized, "ringB").objectReferenceValue = ringB;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // Anillo = LineRenderer circular. El padre "Inclinacion" lo inclina; el anillo gira sobre su propio eje Y.
+    private static Transform CreateRing(string name, Transform parent, float radius, Vector3 tilt, Material material)
+    {
+        GameObject tiltObject = new GameObject(name + " inclinacion");
+        tiltObject.transform.SetParent(parent, false);
+        tiltObject.transform.localRotation = Quaternion.Euler(tilt);
+
+        GameObject ring = new GameObject(name);
+        ring.transform.SetParent(tiltObject.transform, false);
+        LineRenderer line = ring.AddComponent<LineRenderer>();
+        line.useWorldSpace = false;
+        line.loop = true;
+        line.widthMultiplier = 0.05f;
+        line.sharedMaterial = material;
+        line.shadowCastingMode = ShadowCastingMode.Off;
+        line.receiveShadows = false;
+        line.startColor = new Color(0.6f, 1f, 1f);
+        line.endColor = new Color(0.6f, 1f, 1f);
+
+        const int points = 48;
+        line.positionCount = points;
+        for (int i = 0; i < points; i++)
+        {
+            float angle = i * Mathf.PI * 2f / points;
+            line.SetPosition(i, new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius));
+        }
+
+        return ring.transform;
     }
 
     private static GameObject CreateFragmentPrefab(Material material)
@@ -418,13 +474,13 @@ public static class FragmentoSceneBuilder
 
     // ------------------------------------------------------------------ Post-proceso
 
-    private static VolumeProfile CreateVolumeProfile()
+    private static VolumeProfile CreateVolumeProfile(string path = VolumeProfilePath)
     {
-        VolumeProfile profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(VolumeProfilePath);
+        VolumeProfile profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
         if (profile == null)
         {
             profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            AssetDatabase.CreateAsset(profile, VolumeProfilePath);
+            AssetDatabase.CreateAsset(profile, path);
         }
 
         if (!profile.TryGet(out Bloom bloom))
@@ -503,7 +559,7 @@ public static class FragmentoSceneBuilder
         GameObject door = CreateDoor("Compuerta de sombras", "puerta_4", new Vector3(43f, 6.9f, 99.25f), materials);
         GameObject bridge5 = CreateBridge("Puente de luz 5", new Vector3(30.1f, 5f, 125f), new Vector3(14.9f, 5f, 125f), 3f, "puente_5", materials.Bridge);
         GameObject platforms = CreateRotatingPlatforms("Plataformas giratorias", "plataformas_6", materials);
-        GameObject core = CreateCoreAndPortal(materials);
+        GameObject core = CreateCoreAndPortal(materials, Vector3.zero);
 
         ConfigureEvent(bridge1, bridge1.transform, materials.Bridge);
         ConfigureEvent(stairs, stairs.transform.Find("Escalon 10"), materials.Stair);
@@ -525,6 +581,16 @@ public static class FragmentoSceneBuilder
         CreateCheckpoint("Checkpoint F", new Vector3(2f, 8f, 125f), new Vector3(22f, 6f, 20f), new Vector3(2f, 5.05f, 117f));
         CreateCheckpoint("Checkpoint G", new Vector3(2f, 16f, 177f), new Vector3(22f, 8f, 18f), new Vector3(2f, 12.55f, 169f));
 
+        // --- Enemigos rojos: muchos al inicio (islas A, B, C), pocos después. Cada uno patrulla en su isla. ---
+        CreateRedSentinel("Centinela A1", level.transform, new Vector3(-10f, 0.7f, 3f), new Vector3(10f, 0.7f, 3f), IslandArea(0f, 0f, 0f, 30f, 30f), materials);
+        CreateRedSentinel("Centinela A2", level.transform, new Vector3(-6f, 0.7f, 2f), new Vector3(-6f, 0.7f, 12f), IslandArea(0f, 0f, 0f, 30f, 30f), materials);
+        CreateRedSentinel("Centinela A3", level.transform, new Vector3(8f, 0.7f, 12f), new Vector3(-2f, 0.7f, 12f), IslandArea(0f, 0f, 0f, 30f, 30f), materials);
+        CreateRedSentinel("Centinela B1", level.transform, new Vector3(-12f, 0.7f, 40f), new Vector3(12f, 0.7f, 40f), IslandArea(0f, 0f, 45f, 30f, 30f), materials);
+        CreateRedSentinel("Centinela B2", level.transform, new Vector3(6f, 0.7f, 35f), new Vector3(6f, 0.7f, 57f), IslandArea(0f, 0f, 45f, 30f, 30f), materials);
+        CreateRedSentinel("Centinela C1", level.transform, new Vector3(34f, 5.7f, 40f), new Vector3(52f, 5.7f, 40f), IslandArea(43f, 5f, 45f, 26f, 22f), materials);
+        CreateRedSentinel("Centinela D1", level.transform, new Vector3(34f, 5.7f, 84f), new Vector3(52f, 5.7f, 84f), IslandArea(43f, 5f, 88f, 26f, 24f), materials);
+        CreateRedSentinel("Centinela E1", level.transform, new Vector3(36f, 5.7f, 130f), new Vector3(50f, 5.7f, 130f), IslandArea(43f, 5f, 125f, 26f, 22f), materials);
+
         GameObject killZone = new GameObject("Zona de caida");
         killZone.transform.position = new Vector3(20f, -40f, 45f);
         BoxCollider killCollider = killZone.AddComponent<BoxCollider>();
@@ -542,10 +608,12 @@ public static class FragmentoSceneBuilder
         GameObject managers = new GameObject("Gestor de Fragmentos");
         managers.AddComponent<FragmentManager>();
 
-        CreateHud();
+        managers.AddComponent<LivesManager>();
+
+        CreateHud(Nivel02ScenePath, 7);
 
         EditorSceneManager.SaveScene(scene, ScenePath);
-        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+        RegisterScenesInBuildSettings();
     }
 
     // Z+ es el norte, X+ el este. Alturas de la superficie: A y B en y = 0; C y D en y = 5.
@@ -857,13 +925,13 @@ public static class FragmentoSceneBuilder
     }
 
     // Pedestal + esferas del Núcleo (evento del fragmento 7) y Portal de Salida. Devuelve el objeto del evento.
-    private static GameObject CreateCoreAndPortal(Materials materials)
+    private static GameObject CreateCoreAndPortal(Materials materials, Vector3 offset)
     {
-        Vector3 pedestalCenter = new Vector3(2f, 13.1f, 177f);
-        Vector3 coreCenter = new Vector3(2f, 15.2f, 177f);
+        Vector3 pedestalCenter = new Vector3(2f, 13.1f, 177f) + offset;
+        Vector3 coreCenter = new Vector3(2f, 15.2f, 177f) + offset;
 
         CreateBlock("Pedestal", null, pedestalCenter, new Vector3(2.5f, 1.2f, 2.5f), materials.Ruin);
-        CreateBlock("Pedestal base", null, new Vector3(2f, 12.7f, 177f), new Vector3(4f, 0.4f, 4f), materials.Rune);
+        CreateBlock("Pedestal base", null, new Vector3(2f, 12.7f, 177f) + offset, new Vector3(4f, 0.4f, 4f), materials.Rune);
 
         GameObject root = new GameObject("Restauracion del Nucleo");
 
@@ -919,27 +987,27 @@ public static class FragmentoSceneBuilder
         }
         serialized.ApplyModifiedPropertiesWithoutUndo();
 
-        CreatePortal(materials);
+        CreatePortal(materials, offset);
         return root;
     }
 
     // Arco al norte de la cima: pilares + dintel, un disco sellado (con collider) y otro de luz (se activa al abrir).
-    private static void CreatePortal(Materials materials)
+    private static void CreatePortal(Materials materials, Vector3 offset)
     {
         GameObject portal = new GameObject("Portal de Salida");
-        portal.transform.position = new Vector3(2f, 12.5f, 185.5f);
+        portal.transform.position = new Vector3(2f, 12.5f, 185.5f) + offset;
 
-        CreateBlock("Pilar izquierdo", portal.transform, new Vector3(-0.6f, 15.5f, 185.5f), new Vector3(0.8f, 6f, 0.8f), materials.Ruin);
-        CreateBlock("Pilar derecho", portal.transform, new Vector3(4.6f, 15.5f, 185.5f), new Vector3(0.8f, 6f, 0.8f), materials.Ruin);
-        CreateBlock("Dintel", portal.transform, new Vector3(2f, 18.9f, 185.5f), new Vector3(6f, 0.8f, 0.8f), materials.Rune);
+        CreateBlock("Pilar izquierdo", portal.transform, new Vector3(-0.6f, 15.5f, 185.5f) + offset, new Vector3(0.8f, 6f, 0.8f), materials.Ruin);
+        CreateBlock("Pilar derecho", portal.transform, new Vector3(4.6f, 15.5f, 185.5f) + offset, new Vector3(0.8f, 6f, 0.8f), materials.Ruin);
+        CreateBlock("Dintel", portal.transform, new Vector3(2f, 18.9f, 185.5f) + offset, new Vector3(6f, 0.8f, 0.8f), materials.Rune);
 
-        GameObject sealedDisc = CreateBlock("Disco sellado", portal.transform, new Vector3(2f, 15.7f, 185.5f), new Vector3(4.4f, 5.4f, 0.2f), materials.PortalSealed);
-        GameObject openDisc = CreateBlock("Disco de luz", portal.transform, new Vector3(2f, 15.7f, 185.5f), new Vector3(4.4f, 5.4f, 0.1f), materials.PortalOpen);
+        GameObject sealedDisc = CreateBlock("Disco sellado", portal.transform, new Vector3(2f, 15.7f, 185.5f) + offset, new Vector3(4.4f, 5.4f, 0.2f), materials.PortalSealed);
+        GameObject openDisc = CreateBlock("Disco de luz", portal.transform, new Vector3(2f, 15.7f, 185.5f) + offset, new Vector3(4.4f, 5.4f, 0.1f), materials.PortalOpen);
         Object.DestroyImmediate(openDisc.GetComponent<Collider>());
 
         GameObject lightObject = new GameObject("Luz del portal");
         lightObject.transform.SetParent(portal.transform, false);
-        lightObject.transform.position = new Vector3(2f, 15.7f, 183.5f);
+        lightObject.transform.position = new Vector3(2f, 15.7f, 183.5f) + offset;
         Light light = lightObject.AddComponent<Light>();
         light.type = LightType.Point;
         light.color = new Color(0.75f, 0.6f, 1f);
@@ -1156,7 +1224,23 @@ public static class FragmentoSceneBuilder
 
     // ------------------------------------------------------------------ HUD
 
-    private static void CreateHud()
+    // Añade a Build Settings las escenas de nivel que existan, en orden (Nivel 1 primero). Hace falta para SceneManager.LoadScene.
+    private static void RegisterScenesInBuildSettings()
+    {
+        string[] paths = { ScenePath, Nivel02ScenePath };
+        var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+        foreach (string path in paths)
+        {
+            if (File.Exists(path))
+            {
+                scenes.Add(new EditorBuildSettingsScene(path, true));
+            }
+        }
+        EditorBuildSettings.scenes = scenes.ToArray();
+    }
+
+    // nextScene: ruta de la escena a la que lleva el portal (vacío = ninguna). totalFragments: solo para el texto inicial.
+    private static void CreateHud(string nextScene, int totalFragments)
     {
         TMP_FontAsset font = TMP_Settings.defaultFontAsset;
         if (font == null)
@@ -1176,7 +1260,7 @@ public static class FragmentoSceneBuilder
         // Contador arriba a la izquierda.
         TextMeshProUGUI counter = CreateText("Contador", canvasObject.transform, font, 44f, TextAlignmentOptions.TopLeft);
         SetRect(counter.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(48f, -36f), new Vector2(700f, 70f));
-        counter.text = "Fragmentos  0 / 7";
+        counter.text = "Fragmentos  0 / " + totalFragments;
 
         // Mensaje abajo en el centro, dentro de un CanvasGroup para poder desvanecerlo.
         GameObject messageObject = new GameObject("Mensaje", typeof(RectTransform), typeof(CanvasGroup));
@@ -1214,10 +1298,50 @@ public static class FragmentoSceneBuilder
         SetRect(subtitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -60f), new Vector2(1600f, 120f));
         subtitle.text = "A lo lejos, otras regiones esperan la luz de Kael…\n(próxima región: placeholder)";
 
+        TextMeshProUGUI continueHint = CreateText("Continuar", panelObject.transform, font, 34f, TextAlignmentOptions.Center);
+        SetRect(continueHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -190f), new Vector2(1600f, 80f));
+        continueHint.text = "Pulsa Enter para continuar";
+
         EndScreen endScreen = canvasObject.AddComponent<EndScreen>();
         SerializedObject endSerialized = new SerializedObject(endScreen);
         Property(endSerialized, "panel").objectReferenceValue = panelGroup;
+        Property(endSerialized, "continueHint").objectReferenceValue = continueHint;
+        Property(endSerialized, "nextSceneName").stringValue = string.IsNullOrEmpty(nextScene) ? "" : Path.GetFileNameWithoutExtension(nextScene);
         endSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        CreateLivesDisplay(canvasObject.transform);
+    }
+
+    // Tres corazones (círculos de Unity) arriba a la derecha.
+    private static void CreateLivesDisplay(Transform canvas)
+    {
+        Sprite circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+        GameObject row = new GameObject("Vidas", typeof(RectTransform));
+        row.transform.SetParent(canvas, false);
+        SetRect(row.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-48f, -40f), new Vector2(220f, 60f));
+
+        var hearts = new Image[3];
+        for (int i = 0; i < hearts.Length; i++)
+        {
+            GameObject heartObject = new GameObject("Vida " + (i + 1), typeof(RectTransform), typeof(Image));
+            heartObject.transform.SetParent(row.transform, false);
+            SetRect(heartObject.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-i * 72f, 0f), new Vector2(56f, 56f));
+            Image image = heartObject.GetComponent<Image>();
+            image.sprite = circle;
+            image.color = new Color(1f, 0.15f, 0.2f);
+            image.raycastTarget = false;
+            hearts[i] = image;
+        }
+
+        LivesDisplay display = row.AddComponent<LivesDisplay>();
+        SerializedObject serialized = new SerializedObject(display);
+        SerializedProperty list = Property(serialized, "hearts");
+        list.arraySize = hearts.Length;
+        for (int i = 0; i < hearts.Length; i++)
+        {
+            list.GetArrayElementAtIndex(i).objectReferenceValue = hearts[i];
+        }
+        serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static TextMeshProUGUI CreateText(string name, Transform parent, TMP_FontAsset font, float size, TextAlignmentOptions alignment)
@@ -1257,6 +1381,36 @@ public static class FragmentoSceneBuilder
         block.transform.localScale = scale;
         block.GetComponent<Renderer>().sharedMaterial = material;
         return block;
+    }
+
+    // Área permitida de una isla: x/z centrados en la isla, con 1 m de margen al borde; y desde el suelo hacia arriba.
+    private static Bounds IslandArea(float centerX, float surfaceY, float centerZ, float sizeX, float sizeZ)
+    {
+        return new Bounds(new Vector3(centerX, surfaceY + 2f, centerZ), new Vector3(sizeX - 2f, 4f, sizeZ - 2f));
+    }
+
+    // Enemigo rojo: esfera emisiva (arte placeholder) con luz roja y el script RedSentinel.
+    private static GameObject CreateRedSentinel(string name, Transform parent, Vector3 pointA, Vector3 pointB, Bounds area, Materials materials)
+    {
+        GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        enemy.name = name;
+        enemy.transform.SetParent(parent, false);
+        enemy.transform.position = pointA;
+        enemy.transform.localScale = Vector3.one * 1.2f;
+        enemy.GetComponent<Renderer>().sharedMaterial = materials.Enemy;
+        Object.DestroyImmediate(enemy.GetComponent<Collider>()); // el contacto se mide por distancia, no por física
+
+        GameObject lightObject = new GameObject("Luz");
+        lightObject.transform.SetParent(enemy.transform, false);
+        Light light = lightObject.AddComponent<Light>();
+        light.type = LightType.Point;
+        light.color = new Color(1f, 0.1f, 0.05f);
+        light.range = 6f;
+        light.intensity = 4f;
+        light.shadows = LightShadows.None;
+
+        enemy.AddComponent<RedSentinel>().Setup(pointA, pointB, area);
+        return enemy;
     }
 
     private static void EnsureFolder(string path)
