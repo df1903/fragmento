@@ -140,6 +140,7 @@ public static partial class FragmentoSceneBuilder
         public Material Trail;
         public Material Star;
         public Material Enemy;
+        public Material Cloth;   // ropa de Kael (nivel 5 en adelante)
     }
 
     // Paleta: cian/blanco brillante es SOLO de Kael. La luz del mundo es violeta; los fragmentos, ámbar.
@@ -172,6 +173,8 @@ public static partial class FragmentoSceneBuilder
             Star = GetOrCreateTransparentMaterial("Estrella", "Universal Render Pipeline/Particles/Unlit", new Color(2.2f, 2.2f, 2.6f, 1f), null, 0f, false),
             // Rojo puro: solo lo usan los enemigos, para que se lean como peligro frente al violeta/cian.
             Enemy = GetOrCreateMaterial("EnemigoRojo", new Color(0.8f, 0.05f, 0.05f), new Color(1f, 0.1f, 0.05f), 3.5f, 0.5f),
+            // Tela de luz de Kael: más tenue que su cuerpo para que la silueta se lea por capas.
+            Cloth = GetOrCreateMaterial("RopaKael", new Color(0.55f, 0.8f, 0.95f), new Color(0.35f, 0.7f, 1f), 1.6f, 0.4f),
         };
     }
 
@@ -287,16 +290,18 @@ public static partial class FragmentoSceneBuilder
 
     // ------------------------------------------------------------------ Prefabs
 
-    private static GameObject CreateKaelPrefab(Materials materials, string prefabName = "Kael", bool withRings = false)
+    // stage: etapa de materialización (1-2 esfera, 3 torso y cabeza, 4 con brazos y piernas, 5 con ropa). Ver KaelBodyHeight.
+    private static GameObject CreateKaelPrefab(Materials materials, string prefabName = "Kael", bool withRings = false, int stage = 1)
     {
         Material bodyMaterial = materials.Kael;
+        float bodyHeight = KaelBodyHeight(stage);
         GameObject root = new GameObject("Kael");
         root.tag = "Player";
 
         CharacterController controller = root.AddComponent<CharacterController>();
-        controller.height = 1f;
+        controller.height = bodyHeight;
         controller.radius = 0.35f;
-        controller.center = new Vector3(0f, 0.5f, 0f);
+        controller.center = new Vector3(0f, bodyHeight / 2f, 0f);
         controller.stepOffset = 0.3f;
         controller.slopeLimit = 50f;
         controller.skinWidth = 0.035f;
@@ -305,20 +310,28 @@ public static partial class FragmentoSceneBuilder
         GameObject visual = new GameObject("Visual");
         visual.transform.SetParent(root.transform, false);
 
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        body.name = "Cuerpo";
-        body.transform.SetParent(visual.transform, false);
-        body.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-        body.transform.localScale = Vector3.one * 0.7f;
-        body.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
-        Object.DestroyImmediate(body.GetComponent<Collider>()); // el CharacterController ya es su collider
+        if (stage <= 2)
+        {
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            body.name = "Cuerpo";
+            body.transform.SetParent(visual.transform, false);
+            body.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+            body.transform.localScale = Vector3.one * 0.7f;
+            body.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
+            Object.DestroyImmediate(body.GetComponent<Collider>()); // el CharacterController ya es su collider
+        }
+        else
+        {
+            CreateKaelHumanoid(visual.transform, materials, stage);
+        }
 
         // Halo: esfera exterior translúcida. Con el Bloom hace que Kael se lea como "la" luz del nivel.
+        // En las etapas con cuerpo se estira a lo alto para envolver la silueta.
         GameObject halo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         halo.name = "Halo";
         halo.transform.SetParent(visual.transform, false);
-        halo.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-        halo.transform.localScale = Vector3.one * 1.25f;
+        halo.transform.localPosition = new Vector3(0f, bodyHeight / 2f, 0f);
+        halo.transform.localScale = new Vector3(1.25f, Mathf.Max(1.25f, bodyHeight * 1.2f), 1.25f);
         halo.GetComponent<Renderer>().sharedMaterial = materials.Halo;
         Object.DestroyImmediate(halo.GetComponent<Collider>());
 
@@ -359,7 +372,7 @@ public static partial class FragmentoSceneBuilder
 
         GameObject lightObject = new GameObject("Luz");
         lightObject.transform.SetParent(root.transform, false);
-        lightObject.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+        lightObject.transform.localPosition = new Vector3(0f, bodyHeight * 0.7f, 0f);
         Light light = lightObject.AddComponent<Light>();
         light.type = LightType.Point;
         light.color = new Color(0.4f, 0.95f, 1f);
@@ -369,7 +382,7 @@ public static partial class FragmentoSceneBuilder
 
         GameObject cameraTarget = new GameObject("CameraTarget");
         cameraTarget.transform.SetParent(root.transform, false);
-        cameraTarget.transform.localPosition = new Vector3(0f, 1.3f, 0f);
+        cameraTarget.transform.localPosition = new Vector3(0f, 1.3f + (bodyHeight - 1f), 0f);
         cameraTarget.AddComponent<ThirdPersonCamera>();
 
         PlayerController player = root.AddComponent<PlayerController>();
@@ -1227,7 +1240,7 @@ public static partial class FragmentoSceneBuilder
     // Añade a Build Settings las escenas de nivel que existan, en orden (Nivel 1 primero). Hace falta para SceneManager.LoadScene.
     private static void RegisterScenesInBuildSettings()
     {
-        string[] paths = { ScenePath, Nivel02ScenePath };
+        string[] paths = { ScenePath, Nivel02ScenePath, Nivel03ScenePath, Nivel04ScenePath, Nivel05ScenePath };
         var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
         foreach (string path in paths)
         {

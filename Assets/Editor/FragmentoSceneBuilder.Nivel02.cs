@@ -233,7 +233,7 @@ public static partial class FragmentoSceneBuilder
         managers.AddComponent<FragmentManager>();
         managers.AddComponent<LivesManager>();
 
-        CreateHud("", 7);
+        CreateHud(Nivel03ScenePath, 7);
 
         EditorSceneManager.SaveScene(scene, Nivel02ScenePath);
         RegisterScenesInBuildSettings();
