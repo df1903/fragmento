@@ -11,6 +11,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Nivel02_Cavernas.unity
     guid: 03effe699e6d3954e9713b00a53233ff
+  - enabled: 1
+    path: Assets/Scenes/Nivel04_Jardin.unity
+    guid: aea1b009fbb0c4246afa6ad4fc506fef
+  - enabled: 1
+    path: Assets/Scenes/Nivel05_Lago.unity
+    guid: 94cf882cf4893fe44afd9e84027f8c4d
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
