@@ -30,6 +30,12 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Aceleración en el aire (m/s²): menor que en el suelo, pero suficiente para corregir el salto.")]
     [SerializeField] private float airAcceleration = 25f;
 
+    [Tooltip("Si está marcado, Kael puede correr manteniendo Shift (niveles 6 en adelante).")]
+    [SerializeField] private bool canSprint;
+
+    [Tooltip("Cuánto más rápido va al correr (1.5 = un 50 % más).")]
+    [SerializeField] private float sprintMultiplier = 1.5f;
+
     [Tooltip("Objeto visual de Kael. Gira hacia donde camina (la raíz no gira, para no mover la cámara).")]
     [SerializeField] private Transform visual;
 
@@ -66,6 +72,7 @@ public class PlayerController : MonoBehaviour
     private Transform cameraTransform;
     private InputAction moveAction;
     private InputAction jumpAction;
+    private InputAction sprintAction;
 
     private float verticalVelocity;
     private Vector3 horizontalVelocity;
@@ -87,6 +94,18 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>Multiplicador de altura de salto (lo sube <see cref="PlayerPowerUp"/> con cada muerte).</summary>
     public float JumpMultiplier { get; set; } = 1f;
+
+    /// <summary>True mientras Kael corre (Shift pulsado y moviéndose). Los lobos lo oyen y la hierba alta deja de esconderlo.</summary>
+    public bool IsSprinting { get; private set; }
+
+    /// <summary>Dirección en el mundo hacia la que el jugador quiere moverse (longitud 0 a 1). La usan las zonas de trepar.</summary>
+    public Vector3 MoveDirection { get; private set; }
+
+    /// <summary>Velocidad horizontal actual en m/s (la usa la animación de Kael).</summary>
+    public float HorizontalSpeed => horizontalVelocity.magnitude;
+
+    /// <summary>Velocidad vertical actual en m/s (positiva = subiendo).</summary>
+    public float VerticalVelocity => verticalVelocity;
 
     /// <summary>Multiplicador de gravedad (1 = normal). Lo baja <see cref="LowGravityZone"/>: salto más alto y lento.</summary>
     public float GravityScale { get; set; } = 1f;
@@ -121,6 +140,7 @@ public class PlayerController : MonoBehaviour
     {
         moveAction.Enable();
         jumpAction.Enable();
+        sprintAction.Enable();
         GameEvents.CinematicStarted += LockInput;
         GameEvents.CinematicEnded += UnlockInput;
         GameEvents.PlayerRespawned += TeleportTo;
@@ -130,6 +150,7 @@ public class PlayerController : MonoBehaviour
     {
         moveAction.Disable();
         jumpAction.Disable();
+        sprintAction.Disable();
         GameEvents.CinematicStarted -= LockInput;
         GameEvents.CinematicEnded -= UnlockInput;
         GameEvents.PlayerRespawned -= TeleportTo;
@@ -139,6 +160,7 @@ public class PlayerController : MonoBehaviour
     {
         moveAction.Dispose();
         jumpAction.Dispose();
+        sprintAction.Dispose();
     }
 
     private void Update()
@@ -156,6 +178,7 @@ public class PlayerController : MonoBehaviour
         }
 
         MoveInput = input;
+        IsSprinting = canSprint && !inputLocked && sprintAction.IsPressed() && input.sqrMagnitude > 0.04f;
 
         // --- Suelo, coyote time y jump buffer ---
         isGrounded = CheckGrounded();
@@ -194,8 +217,10 @@ public class PlayerController : MonoBehaviour
 
         // --- Movimiento horizontal relativo a la cámara, con aceleración suave ---
         Vector3 moveDirection = CameraRelativeDirection(input);
+        MoveDirection = moveDirection;
         float acceleration = isGrounded ? groundAcceleration : airAcceleration;
-        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, moveDirection * moveSpeed * SpeedMultiplier, acceleration * dt);
+        float sprint = IsSprinting ? sprintMultiplier : 1f;
+        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, moveDirection * moveSpeed * SpeedMultiplier * sprint, acceleration * dt);
         Vector3 velocity = horizontalVelocity + ExternalVelocity + Vector3.up * verticalVelocity;
         controller.Move(velocity * dt);
         ExternalVelocity = Vector3.zero; // el empuje vale un fotograma: quien empuja lo vuelve a sumar
@@ -213,6 +238,15 @@ public class PlayerController : MonoBehaviour
         timeSinceGrounded = 999f;   // en el aire: no se puede saltar encima del rebote
         timeSinceJumpPressed = 999f;
         jumpCutAllowed = false;
+    }
+
+    /// <summary>Detiene la caída (no la subida). Lo usan las zonas de trepar para que Kael no resbale hacia abajo.</summary>
+    public void CancelFall()
+    {
+        if (verticalVelocity < 0f)
+        {
+            verticalVelocity = 0f;
+        }
     }
 
     /// <summary>
@@ -319,5 +353,9 @@ public class PlayerController : MonoBehaviour
         jumpAction = new InputAction("Jump", InputActionType.Button);
         jumpAction.AddBinding("<Keyboard>/space");
         jumpAction.AddBinding("<Gamepad>/buttonSouth");
+
+        sprintAction = new InputAction("Sprint", InputActionType.Button);
+        sprintAction.AddBinding("<Keyboard>/leftShift");
+        sprintAction.AddBinding("<Gamepad>/rightTrigger");
     }
 }

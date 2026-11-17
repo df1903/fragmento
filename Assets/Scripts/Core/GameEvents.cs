@@ -64,6 +64,10 @@ public static class GameEvents
     /// <summary>Un evento de mundo pide una cámara breve que mire a este objeto durante N segundos.</summary>
     public static event Action<Transform, float> EventShotRequested;
 
+    /// <summary>Kael lanzó un Pulso de luz: (centro, radio). Enciende faros y aturde enemigos (lo lanza <see cref="LightPulse"/>).</summary>
+    public static event Action<Vector3, float> LightPulsed;
+
+    public static void RaiseLightPulsed(Vector3 center, float radius) => LightPulsed?.Invoke(center, radius);
     public static void RaiseCoreRestored() => CoreRestored?.Invoke();
     public static void RaiseLevelCompleted() => LevelCompleted?.Invoke();
     public static void RaiseEventShotRequested(Transform focus, float seconds) => EventShotRequested?.Invoke(focus, seconds);
@@ -108,5 +112,6 @@ public static class GameEvents
         CoreRestored = null;
         LevelCompleted = null;
         EventShotRequested = null;
+        LightPulsed = null;
     }
 }

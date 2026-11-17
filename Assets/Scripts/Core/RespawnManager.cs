@@ -18,6 +18,9 @@ public class RespawnManager : MonoBehaviour
     [Tooltip("Punto de reaparición inicial (isla de inicio).")]
     [SerializeField] private Transform initialSpawn;
 
+    [Tooltip("Si está marcado, Kael reaparece en el último checkpoint (faro encendido). Niveles grandes: 6 y 7.")]
+    [SerializeField] private bool respawnAtCheckpoint;
+
     private Vector3 lastCheckpoint;
 
     /// <summary>Posición a la que volvería Kael si cayera ahora.</summary>
@@ -51,6 +54,8 @@ public class RespawnManager : MonoBehaviour
     private void OnPlayerDied()
     {
         // Dificultad por reintentos: toda muerte devuelve al inicio del nivel, no al último checkpoint.
-        GameEvents.RaisePlayerRespawned(initialSpawn != null ? initialSpawn.position : lastCheckpoint);
+        // En los niveles grandes (6 y 7) se vuelve al último faro encendido.
+        bool useCheckpoint = respawnAtCheckpoint || initialSpawn == null;
+        GameEvents.RaisePlayerRespawned(useCheckpoint ? lastCheckpoint : initialSpawn.position);
     }
 }
