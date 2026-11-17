@@ -107,6 +107,12 @@ public class PlayerController : MonoBehaviour
     /// <summary>Velocidad vertical actual en m/s (positiva = subiendo).</summary>
     public float VerticalVelocity => verticalVelocity;
 
+    /// <summary>
+    /// True mientras algo lleva a Kael (la tirolina): se ignoran el input, la gravedad y su velocidad propia;
+    /// solo cuenta ExternalVelocity. Al soltarlo, Kael cae con normalidad.
+    /// </summary>
+    public bool IsCarried { get; set; }
+
     /// <summary>Multiplicador de gravedad (1 = normal). Lo baja <see cref="LowGravityZone"/>: salto más alto y lento.</summary>
     public float GravityScale { get; set; } = 1f;
 
@@ -212,6 +218,17 @@ public class PlayerController : MonoBehaviour
             verticalVelocity *= jumpCutMultiplier;
         }
 
+        // Llevado por la tirolina: solo se mueve con el empuje externo.
+        if (IsCarried)
+        {
+            verticalVelocity = 0f;
+            horizontalVelocity = Vector3.zero;
+            IsSprinting = false;
+            controller.Move(ExternalVelocity * dt);
+            ExternalVelocity = Vector3.zero;
+            return;
+        }
+
         float gravityScale = verticalVelocity < 0f ? fallGravityMultiplier : 1f;
         verticalVelocity = Mathf.Max(verticalVelocity + gravity * gravityScale * GravityScale * dt, maxFallSpeed);
 
@@ -263,6 +280,7 @@ public class PlayerController : MonoBehaviour
         horizontalVelocity = Vector3.zero;
         ExternalVelocity = Vector3.zero;
         GravityScale = 1f;
+        IsCarried = false;
         timeSinceGrounded = 999f;
         timeSinceJumpPressed = 999f;
         isGrounded = false;
