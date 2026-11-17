@@ -120,3 +120,25 @@ Código en `Assets/Scripts/` con su propio ensamblado (`Fragmento.asmdef`): comp
 - **Qué hace:** 21 pruebas con la escena real y un teclado simulado (a 60 FPS). `PrototipoH1Tests` (8): caer al suelo, caminar, saltar (≈ 1.8 m), coyote time, cámara, F1 → puente una sola vez, caída sin puente, cruce con puente. `VerticalSliceH2Tests` (7): HUD (contador y mensaje), F2 → escalera y subida a C, F3 → plataforma y viaje sin resbalar hasta D, respawn en el último checkpoint (y en el inicio), ruta completa A → B → C → D y que ningún fragmento flote sin suelo. `CompleteLevelH3Tests` (6): compuerta, puente 5, plataformas giratorias (geometría y recorrido real saltando), portal sellado, y ruta de los 7 fragmentos hasta la pantalla final con los 7 eventos una sola vez. `LevelTestBase` carga la escena y ofrece ayudas comunes.
 - **Cómo se usa:** *Window > General > Test Runner > PlayMode*, o por consola (`-runTests -testPlatform PlayMode`, **con el Editor cerrado**). Ejecutar antes `Fragmento > Construir Escena`.
 - **Demuestra:** pruebas automáticas (Unity Test Framework + Input System Test Fixture).
+
+## Dinámicas por nivel (`Mechanics/`, `Enemies/`, `WorldEvents/`)
+Cada nivel se juega distinto. Todas las piezas son componentes pequeños con sus números en el Inspector.
+
+| Nivel | Dinámica | Script | Qué ajustar |
+|---|---|---|---|
+| 2 Cavernas | Estalactita que avisa y cae | `FallingStalactite` | `warnSeconds`, `triggerRadius` |
+| 3 Observatorio | Plataforma en órbita | `OrbitPlatformActivate` | `degreesPerSecond` |
+| 3 Observatorio | Campo de baja gravedad | `LowGravityZone` | `gravityScale` (0.45) |
+| 3 Observatorio | Haz que barre (se salta) | `SweepingBeam` | `degreesPerSecond`, `length` |
+| 4 Jardín | Hongo de rebote | `BouncePad` | `bounceHeight` (6.5) |
+| 4 Jardín | Hoja que se derrumba | `CrumblingPlatform` | `shakeSeconds`, `returnSeconds` |
+| 4 Jardín | Zarzas por turnos | `ThornPatch` | `hiddenSeconds`, `warnSeconds`, `outSeconds` |
+| 5 Lago | Corriente que empuja | `PushZone` | `push` (3.5 m/s) |
+| 5 Lago | Marea que sube y baja | `TideWater` | `rise`, `lowSeconds`, `highSeconds` |
+| 5 Lago | Balsa | `MovingPlatformActivate` | `speed`, `pauseSeconds` |
+
+- `PlayerZone` es la base de las zonas (corriente, baja gravedad, rebote): cada fotograma pregunta si los pies de Kael están dentro de su caja. No depende de `OnTriggerEnter`, que falla al teletransportar.
+- `ActivateOnEvent` enciende objetos con un fragmento (los hongos, el campo de ingravidez).
+- Los peligros nuevos heredan de `Hazard`: quietos en cámaras de evento y con gracia al reaparecer.
+- `PlayerController` expone `GravityScale`, `ExternalVelocity` y `Launch(altura)` para estas piezas.
+- El constructor anota los saltos normales en `Nivel/Ruta`; la prueba `Los_saltos_de_la_ruta_son_posibles` los comprueba.

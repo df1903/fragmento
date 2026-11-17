@@ -113,6 +113,40 @@ public class Nivel02Tests : LevelTestBase
         Assert.IsTrue(portal.IsOpen, "Con los siete fragmentos el portal debe abrirse.");
     }
 
+    [UnityTest]
+    public IEnumerator La_estalactita_avisa_cae_y_mata_a_quien_no_se_aparta()
+    {
+        yield return LoadLevel(true);
+        FallingStalactite stalactite = null;
+        foreach (Hazard hazard in Object.FindObjectsByType<Hazard>(FindObjectsSortMode.None))
+        {
+            if (hazard.name == "Estalactita 4A" && hazard is FallingStalactite found)
+            {
+                stalactite = found;
+            }
+            else
+            {
+                hazard.enabled = false;
+            }
+        }
+        Assert.IsNotNull(stalactite, "No se encontró Estalactita 4A");
+
+        int deaths = 0;
+        System.Action counter = () => deaths++;
+        GameEvents.PlayerDied += counter;
+
+        Teleport(stalactite.transform.position + Vector3.up * 0.05f); // justo debajo
+        yield return new WaitForSeconds(0.4f);
+        Assert.IsTrue(stalactite.IsWarning, "Primero debe avisar.");
+        Assert.AreEqual(0, deaths, "Durante el aviso todavía no mata.");
+
+        yield return new WaitForSeconds(2f);
+        GameEvents.PlayerDied -= counter;
+
+        Assert.GreaterOrEqual(stalactite.Falls, 1, "La estalactita debe haber caído.");
+        Assert.GreaterOrEqual(deaths, 1, "Si Kael no se aparta, la estalactita lo mata.");
+    }
+
     private static CrystalGrow FindGrow(string objectName)
     {
         foreach (CrystalGrow grow in Object.FindObjectsByType<CrystalGrow>(FindObjectsSortMode.None))

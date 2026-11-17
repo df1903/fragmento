@@ -8,23 +8,20 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// QUÉ HACE
-///   Esqueleto común de los niveles 3, 4 y 5 (Observatorio, Jardín petrificado, Lago y cascadas) y de las etapas
-///   de materialización de Kael (torso y cabeza, brazos y piernas, ropa).
+///   Parte común de los niveles 3, 4 y 5 (Observatorio, Jardín petrificado, Lago y cascadas): entorno, Kael por
+///   etapas de materialización, gestores, HUD y decorado reutilizable.
 ///
 /// POR QUÉ EXISTE
-///   Los tres niveles comparten el recorrido probado del nivel 2 (siete zonas hacia +Z, mismas alturas y saltos,
-///   mismos eventos y peligros) y cambian lo que el jugador ve: paleta, luz, niebla, decorado y forma de Kael.
-///   Así solo se escribe una vez la geometría delicada (saltos, huecos) y cada nivel aporta su "escenario".
+///   Lo que es igual en todos los niveles se escribe una vez aquí. Lo que hace distinto a cada nivel (la forma del
+///   recorrido, sus dinámicas, sus peligros y sus eventos) lo define el propio nivel en su BuildLayout.
+///   Antes los tres niveles copiaban la ruta del nivel 2 y se sentían iguales (decisión 2026-11-16).
 ///
 /// CÓMO SE USA
-///   Cada nivel (FragmentoSceneBuilder.Nivel03/04/05.cs) define un LevelTheme y llama a BuildThemedLevel.
-///   Menús: Fragmento > Construir Nivel 3 / 4 / 5 (en el Editor; no por batchmode). La escena se SOBRESCRIBE.
+///   Cada nivel (FragmentoSceneBuilder.Nivel03/04/05.cs) define un LevelTheme con sus zonas y su BuildLayout y
+///   llama a BuildThemedLevel. Menús: Fragmento > Construir Nivel 3 / 4 / 5 (en el Editor; no por batchmode).
 /// </summary>
 public static partial class FragmentoSceneBuilder
 {
-    // Identificadores de evento comunes a los niveles temáticos (cada escena tiene los suyos: no chocan entre niveles).
-    private static readonly string[] ThemedEventIds = { "cristal_1", "puente_2", "plataforma_3", "puerta_4", "cristal_5", "cristal_6", "nucleo_7" };
-
     // Todo lo que cambia entre niveles temáticos.
     private class LevelTheme
     {
@@ -39,7 +36,7 @@ public static partial class FragmentoSceneBuilder
         public string[] FragmentFiles;
         public string[] FragmentTitles;
         public string[] FragmentMessages;
-        public string Chain1Name, Bridge2Name, Platform3Name, Door4Name, Chain5Name, Chain6Name;
+        public string[] EventIds;       // evento de mundo que dispara cada fragmento (7)
 
         // Materiales propios (el resto se toma de Materials)
         public Material Growth;         // lo que brota con los fragmentos: columnas, troncos, piedras; puentes y plataforma activa
@@ -55,35 +52,85 @@ public static partial class FragmentoSceneBuilder
         public float FloorY = float.NaN; // suelo decorativo bajo las zonas (NaN = vacío)
         public Material FloorMaterial;
         public bool Stars;
-        public int HazardTier;          // 0 = peligros del nivel 2; 1 y 2 añaden más
+
+        // Recorrido
+        public Vector3 Spawn = new Vector3(0f, 0.05f, -10f);
+        public ZoneInfo[] Zones;                           // suelos principales del nivel
+        public Rect[] KeepOut = new Rect[0];               // franjas (x, z) del camino donde el decorado no debe estorbar
+        public System.Action<LevelContext> BuildLayout;    // fragmentos, eventos, dinámicas, peligros y saltos del nivel
 
         // Decorado propio del nivel (sin colliders salvo piezas sólidas pequeñas).
         public System.Action<Transform, Materials, LevelTheme> Decorate;
     }
 
+    // Lo que necesita un nivel para armar su recorrido.
+    private class LevelContext
+    {
+        public Transform Level;
+        public Materials Materials;
+        public CaveMaterials Danger;        // materiales de sombras y torretas (iguales en todos los niveles: rojo = peligro)
+        public LevelTheme Theme;
+        public GameObject FragmentPrefab;
+        public FragmentData[] Fragments;
+        public TurretProjectile Projectile;
+        public RouteBuilder Route;
+
+        /// <summary>Coloca el fragmento "id" (1 a 7). La posición es su centro: 1.3 m sobre el suelo.</summary>
+        public void Fragment(int id, Vector3 position)
+        {
+            PlaceFragment(FragmentPrefab, "Fragmento " + id, position, Fragments[id - 1]);
+        }
+    }
+
     // Zona del recorrido: centro X, altura de la superficie Y, centro Z, ancho, fondo y grosor del bloque.
+    // "Plain" = bloque liso sin bordes luminosos (pasillos, cauces).
     private struct ZoneInfo
     {
         public string Name;
         public float X, Y, Z, Width, Depth, Thickness;
+        public bool Plain;
 
-        public ZoneInfo(string name, float x, float y, float z, float width, float depth, float thickness)
+        public ZoneInfo(string name, float x, float y, float z, float width, float depth, float thickness, bool plain = false)
         {
-            Name = name; X = x; Y = y; Z = z; Width = width; Depth = depth; Thickness = thickness;
+            Name = name; X = x; Y = y; Z = z; Width = width; Depth = depth; Thickness = thickness; Plain = plain;
         }
     }
 
-    // Recorrido del nivel 2 (superficies: Z1 y Z2 en y = 0; Z3, Z4 y pasillo en 5; Z6 en 9; Z7 en 14).
-    private static readonly ZoneInfo[] ThemedZones =
+    // Posición del núcleo y el portal: CreateCoreAndPortal los dibuja para la cima del nivel 1 (centro 2, 177; suelo
+    // en 12.5) y recibe un desplazamiento. Esto lo calcula a partir del centro de la cima del nivel (superficie).
+    // La cima debe medir al menos 24 x 20 m y se llega a ella por el sur: el fragmento 7 va 5 m al sur del centro.
+    private static Vector3 CoreOffset(Vector3 summitSurfaceCenter)
     {
-        new ZoneInfo("Zona 1", 0f, 0f, 0f, 30f, 30f, 2f),
-        new ZoneInfo("Zona 2", 0f, 0f, 48f, 36f, 30f, 2f),
-        new ZoneInfo("Zona 3", 0f, 5f, 88f, 36f, 30f, 6f),
-        new ZoneInfo("Zona 4", 0f, 5f, 134f, 36f, 30f, 6f),
-        new ZoneInfo("Pasillo", 0f, 5f, 159f, 8f, 20f, 6f),
-        new ZoneInfo("Zona 6", 0f, 9f, 200f, 36f, 30f, 6f),
-        new ZoneInfo("Zona 7", 0f, 14f, 241f, 24f, 20f, 6f),
-    };
+        return summitSurfaceCenter - new Vector3(2f, 12.5f, 177f);
+    }
+
+    // True si el punto (x, z) queda lejos de las zonas y del camino: ahí se puede poner decorado alto.
+    private static bool IsClear(LevelTheme theme, float x, float z, float margin)
+    {
+        foreach (ZoneInfo zone in theme.Zones)
+        {
+            if (Mathf.Abs(x - zone.X) < zone.Width / 2f + margin && Mathf.Abs(z - zone.Z) < zone.Depth / 2f + margin)
+            {
+                return false;
+            }
+        }
+
+        return !NearPath(theme, x, z, margin);
+    }
+
+    // True si el punto (x, z) cae sobre una franja del camino (theme.KeepOut) o a menos de "margin" metros de ella.
+    private static bool NearPath(LevelTheme theme, float x, float z, float margin)
+    {
+        foreach (Rect strip in theme.KeepOut)
+        {
+            if (x > strip.xMin - margin && x < strip.xMax + margin && z > strip.yMin - margin && z < strip.yMax + margin)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // ------------------------------------------------------------------ Construcción
 
@@ -120,31 +167,30 @@ public static partial class FragmentoSceneBuilder
             }
         }
 
-        // Peligros: mismos enemigos oscuros con ojos rojos en todos los niveles (rojo = peligro).
-        CaveMaterials danger = CreateCaveMaterials();
-        CaveMaterials cave = new CaveMaterials
-        {
-            CrystalGreen = theme.Growth,
-            CrystalMagenta = theme.Accent,
-            Lake = theme.Water,
-            EnemyRock = danger.EnemyRock,
-            TurretCrystal = danger.TurretCrystal,
-            Projectile = danger.Projectile,
-        };
-
         FragmentData[] fragments = new FragmentData[7];
         for (int i = 0; i < fragments.Length; i++)
         {
             fragments[i] = CreateFragmentData(i + 1, theme.FilePrefix + "Fragmento0" + (i + 1) + "_" + theme.FragmentFiles[i],
-                theme.FragmentTitles[i], theme.FragmentMessages[i], ThemedEventIds[i], new Color(1f, 0.75f, 0.25f));
+                theme.FragmentTitles[i], theme.FragmentMessages[i], theme.EventIds[i], new Color(1f, 0.75f, 0.25f));
         }
 
+        // Peligros: mismos enemigos oscuros con ojos rojos en todos los niveles (rojo = peligro).
+        CaveMaterials danger = CreateCaveMaterials();
+
+        LevelContext context = new LevelContext
+        {
+            Materials = materials,
+            Danger = danger,
+            Theme = theme,
+            Fragments = fragments,
+            FragmentPrefab = CreateFragmentPrefab(materials.Fragment),
+            Projectile = CreateProjectilePrefab(danger.Projectile),
+        };
+
         GameObject kaelPrefab = CreateKaelPrefab(materials, theme.KaelPrefabName, theme.KaelRings, theme.KaelStage);
-        GameObject fragmentPrefab = CreateFragmentPrefab(materials.Fragment);
-        TurretProjectile projectilePrefab = CreateProjectilePrefab(danger.Projectile);
         VolumeProfile volumeProfile = CreateThemeVolumeProfile(theme);
 
-        BuildThemedScene(theme, materials, cave, fragments, kaelPrefab, fragmentPrefab, projectilePrefab, volumeProfile);
+        BuildThemedScene(context, kaelPrefab, volumeProfile);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -163,9 +209,10 @@ public static partial class FragmentoSceneBuilder
         return profile;
     }
 
-    private static void BuildThemedScene(LevelTheme theme, Materials materials, CaveMaterials cave, FragmentData[] fragments,
-        GameObject kaelPrefab, GameObject fragmentPrefab, TurretProjectile projectilePrefab, VolumeProfile volumeProfile)
+    private static void BuildThemedScene(LevelContext context, GameObject kaelPrefab, VolumeProfile volumeProfile)
     {
+        LevelTheme theme = context.Theme;
+        Materials materials = context.Materials;
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         ConfigureThemeEnvironment(theme);
@@ -178,68 +225,30 @@ public static partial class FragmentoSceneBuilder
         }
 
         GameObject level = new GameObject("Nivel");
+        context.Level = level.transform;
+        context.Route = new RouteBuilder(level.transform);
+
+        // --- Suelos, y después lo propio del nivel: fragmentos, eventos, dinámicas y peligros ---
         BuildThemedZones(level.transform, materials, theme);
+        theme.BuildLayout(context);
         theme.Decorate(level.transform, materials, theme);
-
-        // --- Jugador y cámara ---
-        Vector3 spawn = new Vector3(0f, 0.05f, -10f);
-        GameObject kael = (GameObject)PrefabUtility.InstantiatePrefab(kaelPrefab);
-        kael.transform.position = spawn;
-        CreatePlayerCamera(kael.transform.Find("CameraTarget"));
-
-        // --- Fragmentos (cada uno a +1.3 m sobre el suelo de su zona) ---
-        PlaceFragment(fragmentPrefab, "Fragmento 1", new Vector3(-6f, 1.3f, 8f), fragments[0]);
-        PlaceFragment(fragmentPrefab, "Fragmento 2", new Vector3(-26f, 1.3f, 57f), fragments[1]);
-        PlaceFragment(fragmentPrefab, "Fragmento 3", new Vector3(-10f, 6.3f, 95f), fragments[2]);
-        PlaceFragment(fragmentPrefab, "Fragmento 4", new Vector3(10f, 6.3f, 130f), fragments[3]);
-        PlaceFragment(fragmentPrefab, "Fragmento 5", new Vector3(0f, 6.3f, 164f), fragments[4]);
-        PlaceFragment(fragmentPrefab, "Fragmento 6", new Vector3(10f, 10.3f, 200f), fragments[5]);
-        PlaceFragment(fragmentPrefab, "Fragmento 7", new Vector3(0f, 15.3f, 236f), fragments[6]);
-
-        // --- Eventos de mundo (misma geometría que el nivel 2) ---
-        float b = theme.ChainBaseY;
-        GameObject chain1 = CreateCrystalChain(theme.Chain1Name, "cristal_1", theme.Growth, b, 5f, 3.2f,
-            new[] { new Vector3(0f, 0f, 17.5f), new Vector3(0f, 0.5f, 21.5f), new Vector3(0f, 0f, 25.5f), new Vector3(0f, 0.5f, 29.5f) });
-        GameObject bridge2 = CreateBridge(theme.Bridge2Name, new Vector3(0f, 0f, 62.9f), new Vector3(0f, 5f, 73.1f), 4f, "puente_2", theme.Growth);
-        GameObject platform3 = CreateMovingPlatform(theme.Platform3Name, "plataforma_3", new Vector3(0f, 4.7f, 106f), new Vector3(0f, 0f, 16f), materials);
-        GameObject door4 = CreateDoor(theme.Door4Name, "puerta_4", new Vector3(0f, 6.9f, 146f), materials);
-        GameObject chain5 = CreateCrystalChain(theme.Chain5Name, "cristal_5", theme.Growth, b, 8f, 4f,
-            new[] { new Vector3(0f, 6f, 172f), new Vector3(0f, 7f, 177f), new Vector3(0f, 8f, 182f) });
-        GameObject chain6 = CreateCrystalChain(theme.Chain6Name, "cristal_6", theme.Growth, b, 6f, 3.6f,
-            new[] { new Vector3(0f, 10.4f, 217.8f), new Vector3(0f, 11.8f, 222.6f), new Vector3(0f, 13.2f, 227.4f) });
-        GameObject core = CreateCoreAndPortal(materials, new Vector3(-2f, 1.5f, 64f));
-
-        ConfigureEvent(chain1, chain1.transform.GetChild(1).GetChild(0), theme.Growth);
-        ConfigureEvent(bridge2, bridge2.transform, theme.Growth);
-        ConfigureEvent(platform3, platform3.transform, theme.Growth);
-        ConfigureEvent(door4, door4.transform.Find("Losa"), materials.Door);
-        ConfigureEvent(chain5, chain5.transform.GetChild(1).GetChild(0), theme.Growth);
-        ConfigureEvent(chain6, chain6.transform.GetChild(1).GetChild(0), theme.Growth);
-        ConfigureEvent(core, core.transform.Find("Nucleo"), materials.Core);
-
         CreateEventCamera();
 
-        // --- Peligros ---
-        BuildHazards(level.transform, materials, cave, projectilePrefab);
-        BuildExtraHazards(level.transform, materials, cave, projectilePrefab, theme.HazardTier);
-
-        // --- Checkpoints (una zona = un punto seguro) ---
-        CreateCheckpoint("Checkpoint 2", new Vector3(0f, 3f, 48f), new Vector3(30f, 8f, 28f), new Vector3(0f, 0.05f, 38f));
-        CreateCheckpoint("Checkpoint 3", new Vector3(0f, 8f, 88f), new Vector3(30f, 8f, 28f), new Vector3(0f, 5.05f, 78f));
-        CreateCheckpoint("Checkpoint 4", new Vector3(0f, 8f, 130f), new Vector3(30f, 8f, 22f), new Vector3(0f, 5.05f, 122f));
-        CreateCheckpoint("Checkpoint 6", new Vector3(0f, 12f, 200f), new Vector3(30f, 8f, 28f), new Vector3(0f, 9.05f, 190f));
-        CreateCheckpoint("Checkpoint 7", new Vector3(0f, 17f, 241f), new Vector3(22f, 8f, 18f), new Vector3(0f, 14.05f, 232f));
+        // --- Jugador y cámara ---
+        GameObject kael = (GameObject)PrefabUtility.InstantiatePrefab(kaelPrefab);
+        kael.transform.position = theme.Spawn;
+        CreatePlayerCamera(kael.transform.Find("CameraTarget"));
 
         // --- Caída, respawn y gestores ---
         GameObject killZone = new GameObject("Zona de caida");
         killZone.transform.position = new Vector3(0f, theme.KillY, 120f);
         BoxCollider killCollider = killZone.AddComponent<BoxCollider>();
-        killCollider.size = new Vector3(600f, 2f, 600f);
+        killCollider.size = new Vector3(800f, 2f, 800f);
         killCollider.isTrigger = true;
         killZone.AddComponent<KillZone>();
 
         GameObject spawnPoint = new GameObject("Inicio");
-        spawnPoint.transform.position = spawn;
+        spawnPoint.transform.position = theme.Spawn;
 
         GameObject respawn = new GameObject("Gestor de Respawn");
         RespawnManager respawnManager = respawn.AddComponent<RespawnManager>();
@@ -280,16 +289,16 @@ public static partial class FragmentoSceneBuilder
         RenderSettings.fogColor = theme.FogColor;
     }
 
-    // Zonas, piedras del lago, muros de la compuerta y coberturas: la geometría jugable del nivel 2, con los materiales del tema.
+    // Suelos del nivel (theme.Zones) con sus cimientos, el suelo decorativo lejano y una luz suave por zona.
     private static void BuildThemedZones(Transform level, Materials materials, LevelTheme theme)
     {
-        foreach (ZoneInfo zone in ThemedZones)
+        foreach (ZoneInfo zone in theme.Zones)
         {
             Vector3 center = new Vector3(zone.X, zone.Y - zone.Thickness / 2f, zone.Z);
             Vector3 size = new Vector3(zone.Width, zone.Thickness, zone.Depth);
-            if (zone.Name == "Pasillo")
+            if (zone.Plain)
             {
-                CreateBlock("Pasillo", level, center, size, materials.StoneTop);
+                CreateBlock(zone.Name, level, center, size, materials.StoneTop);
             }
             else
             {
@@ -304,46 +313,35 @@ public static partial class FragmentoSceneBuilder
                 if (height > 0.1f)
                 {
                     GameObject foundation = CreateBlock(zone.Name + " cimientos", level, new Vector3(zone.X, theme.FloorY + height / 2f, zone.Z),
-                        new Vector3(zone.Width - 3f, height, zone.Depth - 3f), materials.Stone);
+                        new Vector3(Mathf.Max(zone.Width - 3f, 1f), height, Mathf.Max(zone.Depth - 3f, 1f)), materials.Stone);
                     Object.DestroyImmediate(foundation.GetComponent<Collider>());
                     NoShadow(foundation);
                 }
             }
+
+            // Luz suave: da color al ambiente sin tocar los enemigos (que llevan su luz roja).
+            CreateZoneLight(level, new Vector3(zone.X, zone.Y + 7f, zone.Z), theme.ZoneLightColor, 24f, 3f);
         }
 
         // Suelo decorativo lejano (valle o lecho).
         if (!float.IsNaN(theme.FloorY) && theme.FloorMaterial != null)
         {
-            GameObject floor = CreateBlock("Suelo", level, new Vector3(0f, theme.FloorY - 0.5f, 120f), new Vector3(700f, 1f, 700f), theme.FloorMaterial);
+            GameObject floor = CreateBlock("Suelo", level, new Vector3(0f, theme.FloorY - 0.5f, 120f), new Vector3(800f, 1f, 800f), theme.FloorMaterial);
             Object.DestroyImmediate(floor.GetComponent<Collider>());
             NoShadow(floor);
         }
+    }
 
-        // Piedras hacia el Fragmento 2 (saltos de 1 a 1.5 m).
-        CreateIsland("Piedra A", level, new Vector3(-21f, -1f, 46f), new Vector3(3f, 2f, 3f), materials);
-        CreateIsland("Piedra B", level, new Vector3(-25f, -1f, 50f), new Vector3(3f, 2f, 3f), materials);
-        CreateIsland("Islote del Fragmento 2", level, new Vector3(-26f, -1f, 57f), new Vector3(8f, 2f, 8f), materials);
-
-        // Muros de la compuerta del Fragmento 4 (hueco de 4 m en x -2..2).
-        CreateBlock("Muro compuerta izquierdo", level, new Vector3(-10f, 7f, 146f), new Vector3(16f, 4f, 1.5f), materials.Ruin);
-        CreateBlock("Muro compuerta derecho", level, new Vector3(10f, 7f, 146f), new Vector3(16f, 4f, 1.5f), materials.Ruin);
-        CreateBlock("Dintel compuerta", level, new Vector3(0f, 8.5f, 146f), new Vector3(4f, 1f, 1.5f), materials.Ruin);
-
-        // Coberturas (3 m de alto): el jugador se esconde de las torretas detrás de ellas.
-        CreateBlock("Cobertura 3A", level, new Vector3(-4f, 6.5f, 88f), new Vector3(3f, 3f, 3f), materials.Ruin);
-        CreateBlock("Cobertura 3B", level, new Vector3(6f, 6.5f, 97f), new Vector3(3f, 3f, 3f), materials.Ruin);
-        CreateBlock("Cobertura 4A", level, new Vector3(-5f, 6.5f, 132f), new Vector3(3f, 3f, 3f), materials.Ruin);
-        CreateBlock("Cobertura 4B", level, new Vector3(5f, 6.5f, 128f), new Vector3(3f, 3f, 3f), materials.Ruin);
-        CreateBlock("Cobertura 4C", level, new Vector3(0f, 6.5f, 138f), new Vector3(3f, 3f, 3f), materials.Ruin);
-        CreateBlock("Cobertura 6A", level, new Vector3(-6f, 10.5f, 198f), new Vector3(3f, 3f, 3f), materials.Ruin);
-        CreateBlock("Cobertura 6B", level, new Vector3(6f, 10.5f, 202f), new Vector3(3f, 3f, 3f), materials.Ruin);
-        CreateBlock("Cobertura 6C", level, new Vector3(0f, 10.5f, 206f), new Vector3(3f, 3f, 3f), materials.Ruin);
-
-        // Luz suave por zona: da color al ambiente sin tocar los enemigos (que llevan su luz roja).
-        foreach (ZoneInfo zone in ThemedZones)
-        {
-            CreateZoneLight(level, new Vector3(zone.X, zone.Y + 7f, zone.Z), theme.ZoneLightColor, 24f, 3f);
-        }
+    // Muro con hueco de 4 m y compuerta que se hunde con el evento. El muro cruza en X de xMin a xMax, a la altura
+    // "floorY" y en z; el hueco queda centrado en doorX. Devuelve la compuerta (para ConfigureEvent).
+    private static GameObject CreateGateWall(Transform level, string name, string eventId, float xMin, float xMax, float doorX, float floorY, float z, Materials materials)
+    {
+        float leftWidth = doorX - 2f - xMin;
+        float rightWidth = xMax - (doorX + 2f);
+        CreateBlock(name + " muro izquierdo", level, new Vector3(xMin + leftWidth / 2f, floorY + 2f, z), new Vector3(leftWidth, 4f, 1.5f), materials.Ruin);
+        CreateBlock(name + " muro derecho", level, new Vector3(xMax - rightWidth / 2f, floorY + 2f, z), new Vector3(rightWidth, 4f, 1.5f), materials.Ruin);
+        CreateBlock(name + " dintel", level, new Vector3(doorX, floorY + 3.5f, z), new Vector3(4f, 1f, 1.5f), materials.Ruin);
+        return CreateDoor(name, eventId, new Vector3(doorX, floorY + 1.9f, z), materials);
     }
 
     private static void CreateZoneLight(Transform parent, Vector3 position, Color color, float range, float intensity)
@@ -357,22 +355,6 @@ public static partial class FragmentoSceneBuilder
         light.range = range;
         light.intensity = intensity;
         light.shadows = LightShadows.None;
-    }
-
-    // Peligros extra para los niveles más avanzados (tier 1 y 2); el tier 0 usa solo los del nivel 2.
-    private static void BuildExtraHazards(Transform level, Materials materials, CaveMaterials cave, TurretProjectile projectile, int tier)
-    {
-        if (tier >= 1)
-        {
-            CreateRockShadow("Sombra 2C", level, new Vector3(14f, 0.9f, 47f), new Vector3(-14f, 0.9f, 47f), IslandArea(0f, 0f, 48f, 36f, 30f), materials, cave);
-            CreateCrystalTurret("Torreta 3B", level, new Vector3(15f, 5f, 81f), 1, 2.8f, projectile, materials, cave);
-        }
-
-        if (tier >= 2)
-        {
-            CreateRockShadow("Sombra 4B", level, new Vector3(-12f, 5.9f, 143f), new Vector3(12f, 5.9f, 143f), IslandArea(0f, 5f, 134f, 36f, 30f), materials, cave);
-            CreateRockShadow("Sombra 6B", level, new Vector3(12f, 9.9f, 190f), new Vector3(-12f, 9.9f, 190f), IslandArea(0f, 9f, 200f, 36f, 30f), materials, cave);
-        }
     }
 
     // ------------------------------------------------------------------ Kael por etapas

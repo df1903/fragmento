@@ -9,7 +9,8 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// QUÉ HACE
 ///   Parte del constructor de escenas que genera el Nivel 2, "Cavernas de Cristal" (Nivel02_Cavernas.unity):
-///   una cueva cerrada con lago de sombras, 7 fragmentos, "sombras de roca" que embisten y torretas de cristal.
+///   una cueva cerrada con lago de sombras, 7 fragmentos, "sombras de roca" que embisten, torretas de cristal y
+///   estalactitas que caen. Es el nivel de la OSCURIDAD y la COBERTURA: el único con muchas torretas.
 ///
 /// POR QUÉ EXISTE
 ///   Igual que el nivel 1, la escena es un resultado del código: se regenera igual en cualquier PC y dos
@@ -458,9 +459,16 @@ public static partial class FragmentoSceneBuilder
         CreateCrystalTurret("Torreta 4W", level, new Vector3(-15f, 5f, 140f), 1, 2.6f, projectile, materials, cave);
         CreateCrystalTurret("Torreta 4E", level, new Vector3(15f, 5f, 140f), 3, 3.2f, projectile, materials, cave);
 
-        // Zona 5 (pasillo de cristales, 8 m de ancho): dos sombras, sin sitio para esconderse; hay que leer el aviso.
+        // Zona 5 (pasillo de cristales, 8 m de ancho): una sombra y estalactitas, sin sitio para esconderse; hay que leer los avisos.
         CreateRockShadow("Sombra 5A", level, new Vector3(-3f, 5.9f, 155f), new Vector3(3f, 5.9f, 155f), IslandArea(0f, 5f, 159f, 8f, 20f), materials, cave);
-        CreateRockShadow("Sombra 5B", level, new Vector3(3f, 5.9f, 163f), new Vector3(-3f, 5.9f, 163f), IslandArea(0f, 5f, 159f, 8f, 20f), materials, cave);
+
+        // Estalactitas que caen (peligro propio de las cavernas): círculo rojo de aviso en el suelo y cae la roca.
+        // Tres en la cámara de estalactitas (entre las coberturas) y dos en el pasillo.
+        CreateFallingStalactite(level, "Estalactita 4A", new Vector3(-10f, 5f, 126f), 16f, materials.Stone, materials);
+        CreateFallingStalactite(level, "Estalactita 4B", new Vector3(10f, 5f, 136f), 16f, materials.Stone, materials);
+        CreateFallingStalactite(level, "Estalactita 4C", new Vector3(0f, 5f, 142.5f), 16f, materials.Stone, materials);
+        CreateFallingStalactite(level, "Estalactita 5A", new Vector3(-1.5f, 5f, 152f), 16f, materials.Stone, materials);
+        CreateFallingStalactite(level, "Estalactita 5B", new Vector3(1.5f, 5f, 160f), 16f, materials.Stone, materials);
 
         // Zona 6 (cámara del eco): dos torretas en ráfaga y una sombra.
         CreateRockShadow("Sombra 6A", level, new Vector3(-12f, 9.9f, 200f), new Vector3(12f, 9.9f, 200f), IslandArea(0f, 9f, 200f, 36f, 30f), materials, cave);
