@@ -28,6 +28,9 @@ public class MovingPlatformActivate : WorldEventBase
     [Tooltip("Segundos que espera en cada extremo.")]
     [SerializeField] private float pauseSeconds = 2f;
 
+    [Tooltip("Si está marcado, se mueve desde el principio sin esperar a un fragmento (balsas del nivel 5).")]
+    [SerializeField] private bool activeFromStart;
+
     [Tooltip("Renderer cuyo material cambia al activarse.")]
     [SerializeField] private Renderer platformRenderer;
 
@@ -56,6 +59,16 @@ public class MovingPlatformActivate : WorldEventBase
         if (platformRenderer != null && inactiveMaterial != null)
         {
             platformRenderer.sharedMaterial = inactiveMaterial;
+        }
+
+        if (activeFromStart)
+        {
+            if (platformRenderer != null && activeMaterial != null)
+            {
+                platformRenderer.sharedMaterial = activeMaterial;
+            }
+
+            moving = true;
         }
     }
 
