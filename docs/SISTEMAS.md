@@ -167,3 +167,15 @@ La forma de cada nivel es una función: `ForestHeight(x, z)` y `VillageHeight(x,
 | Mover algo | `MoveOnEvent` | Puertas, puente levadizo, arroyo que se seca | `offset`, `rotation`, `seconds` |
 
 Controles nuevos (solo niveles 6 y 7): **Shift** correr, **F** Pulso de luz (la E ya gira la cámara). Para trepar, caminar contra la liana o la escalera.
+
+## Niveles 8 (Ciudad Dormida) y 9 (El Hogar)
+| Pieza | Script | Qué hace | Qué ajustar |
+|---|---|---|---|
+| Tirolina | `ZipLine` | Al acercarse al poste, Kael se cuelga y baja por el cable | `speed` (11), `hang`, `grabRadius` |
+| Ser llevado | `PlayerController.IsCarried` | Ignora input y gravedad; solo cuenta el empuje externo | — |
+| Reflector | `Searchlight` | Cono de luz; si ve a Kael 1 s sin nada en medio, lo mata. Torre que barre o dron con ruta | `range`, `halfAngle`, `lockSeconds`, `sweepSpeed` |
+| Plato giratorio | `SpinningPlatform` | Gira un Rigidbody cinemático; Kael viaja encima | `degreesPerSecond` |
+| Juguete en ruta | `PathHazard` | Sigue puntos (vuelta o ida y vuelta) y atropella | `speed`, `killRadius` |
+| Péndulo | `SwingingPendulum` | Oscila y barre el camino | `amplitude`, `period` |
+
+El nivel 9 no escala a Kael: los muebles miden 8 veces lo normal (mesa a 6 m, estantería a 17 m). Las texturas se repiten 8 veces menos para que la madera y las telas se vean a esa escala.
