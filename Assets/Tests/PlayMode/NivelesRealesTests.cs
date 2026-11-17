@@ -23,6 +23,9 @@ public abstract class NivelesRealesTestsBase : LevelTestBase
     /// <summary>Partes propias de la etapa (rutas bajo "Visual").</summary>
     protected abstract string[] KaelParts { get; }
 
+    /// <summary>Dónde probar la carrera (x, z) si al norte del inicio hay un fragmento (lo recogería y bloquearía el control).</summary>
+    protected virtual Vector2? SprintTestStart => null;
+
     [UnityTest]
     public IEnumerator La_escena_tiene_fragmentos_vidas_y_portal()
     {
@@ -47,7 +50,7 @@ public abstract class NivelesRealesTestsBase : LevelTestBase
 
         string[] common =
         {
-            "Cadera/Torso/Cabeza/Cara", "Cadera/Torso/Cabeza/Pelo", "Cadera/Torso/Capa", "Cadera/Torso/Brazo izquierdo/Antebrazo izquierdo",
+            "Cadera/Torso/Cabeza/Cara", "Cadera/Torso/Cabeza/Pelo", "Cadera/Torso/Brazo izquierdo/Antebrazo izquierdo",
             "Cadera/Muslo izquierdo/Pantorrilla izquierda", "Cadera/Muslo derecho/Pantorrilla derecha",
         };
         foreach (string part in common)
@@ -71,6 +74,10 @@ public abstract class NivelesRealesTestsBase : LevelTestBase
         yield return LoadLevel();
         yield return new WaitForSeconds(0.8f);
         Assert.IsTrue(player.IsGrounded, "Kael debe aparecer sobre el suelo.");
+        if (SprintTestStart.HasValue)
+        {
+            yield return DropAt(SprintTestStart.Value.x, SprintTestStart.Value.y);
+        }
 
         Press(keyboard.wKey);
         yield return new WaitForSeconds(1f);
@@ -208,7 +215,7 @@ public abstract class NivelesRealesTestsBase : LevelTestBase
 public class Nivel06Tests : NivelesRealesTestsBase
 {
     protected override string LevelScene => "Nivel06_Bosque";
-    protected override string[] KaelParts => new[] { "Cadera/Torso/Corazon de luz" };
+    protected override string[] KaelParts => new[] { "Cadera/Torso/Corazon de luz", "Cadera/Torso/Capa" };
 
     [UnityTest]
     public IEnumerator El_arbol_cae_y_hace_de_puente_sobre_el_rio()
@@ -329,7 +336,7 @@ public class Nivel06Tests : NivelesRealesTestsBase
 public class Nivel07Tests : NivelesRealesTestsBase
 {
     protected override string LevelScene => "Nivel07_Aldea";
-    protected override string[] KaelParts => new[] { "Cadera/Torso/Cabeza/Capucha", "Cadera/Torso/Zurron" };
+    protected override string[] KaelParts => new[] { "Cadera/Torso/Cabeza/Capucha", "Cadera/Torso/Zurron", "Cadera/Torso/Capa" };
 
     [UnityTest]
     public IEnumerator El_puente_levadizo_baja_con_el_fragmento_1()
@@ -439,5 +446,209 @@ public class Nivel07Tests : NivelesRealesTestsBase
 
         Assert.IsTrue(plate.IsPressed, "La caja debe pulsar la placa.");
         Assert.Less(grate.position.y, closedY - 2.5f, "La reja de la torre debe haberse hundido.");
+    }
+}
+
+/// <summary>Nivel 8, Ciudad Dormida: tirolinas, reflectores, montacargas y grúa.</summary>
+public class Nivel08Tests : NivelesRealesTestsBase
+{
+    protected override string LevelScene => "Nivel08_Ciudad";
+    protected override string[] KaelParts => new[] { "Halo", "Cadera/Torso/Capa" };
+
+    [UnityTest]
+    public IEnumerator La_tirolina_lleva_a_Kael_de_la_azotea_A_a_la_B()
+    {
+        yield return LoadLevel();
+        yield return CollectAndWait(2, 3f);
+        ZipLine zip = FindByName<ZipLine>("Tirolina A-B");
+
+        Teleport(new Vector3(13.5f, 12.1f, 56.5f)); // junto al poste de la azotea A
+        bool rode = false;
+        float timeout = 8f;
+        while (timeout > 0f)
+        {
+            timeout -= Time.deltaTime;
+            rode |= zip.IsRiding;
+            if (rode && !zip.IsRiding)
+            {
+                break;
+            }
+            yield return null;
+        }
+        yield return new WaitForSeconds(1f);
+
+        Assert.IsTrue(rode, "Kael debe colgarse de la tirolina.");
+        Assert.Less(player.transform.position.x, -11f, "Kael debe acabar en la azotea B (al oeste de la avenida).");
+        Assert.AreEqual(8f, player.transform.position.y, 0.6f, "Kael debe quedar de pie sobre la azotea B.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_reflector_mata_si_ve_a_Kael_y_no_si_esta_a_cubierto()
+    {
+        yield return LoadLevel(true);
+        Searchlight searchlight = OnlyHazard<Searchlight>("Reflector de la avenida");
+        searchlight.HoldStill = true;
+        yield return null;
+
+        Transform head = searchlight.transform.Find("Cabeza");
+        Assert.IsTrue(Physics.Raycast(head.position + head.forward, head.forward, out RaycastHit spot, 60f, ~0, QueryTriggerInteraction.Ignore));
+        Vector3 lit = spot.point;
+
+        // A cubierto: un muro entre el foco y Kael.
+        GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        wall.transform.position = Vector3.Lerp(head.position, lit + Vector3.up, 0.6f);
+        wall.transform.rotation = Quaternion.LookRotation(lit - head.position);
+        wall.transform.localScale = new Vector3(6f, 6f, 0.5f);
+        Teleport(lit + Vector3.up * 0.1f);
+        int deaths = 0;
+        yield return CountDeaths(2.5f, value => deaths = value);
+        Assert.AreEqual(0, deaths, "A cubierto, el reflector no ve a Kael.");
+
+        Object.Destroy(wall);
+        yield return null;
+        Teleport(lit + Vector3.up * 0.1f);
+        yield return CountDeaths(2.5f, value => deaths = value);
+        Assert.GreaterOrEqual(deaths, 1, "Al descubierto, el reflector mata a Kael tras el aviso.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_pulso_ciega_al_reflector()
+    {
+        yield return LoadLevel(true);
+        Searchlight searchlight = OnlyHazard<Searchlight>("Reflector de la avenida");
+        searchlight.HoldStill = true;
+        yield return null;
+
+        Transform head = searchlight.transform.Find("Cabeza");
+        Physics.Raycast(head.position + head.forward, head.forward, out RaycastHit spot, 60f, ~0, QueryTriggerInteraction.Ignore);
+        Teleport(spot.point + Vector3.up * 0.1f);
+        yield return null;
+        Assert.IsTrue(player.GetComponent<LightPulse>().Trigger());
+        yield return null;
+        Assert.IsTrue(searchlight.IsBlind, "El Pulso debe cegar al reflector.");
+
+        int deaths = 0;
+        yield return CountDeaths(2.5f, value => deaths = value);
+        Assert.AreEqual(0, deaths, "Cegado, el reflector no mata.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_montacargas_sube_y_la_grua_gira()
+    {
+        yield return LoadLevel();
+        MovingPlatformActivate lift = FindByName<MovingPlatformActivate>("Montacargas de obra");
+        float bottom = lift.transform.position.y;
+        yield return CollectAndWait(3, 0f);
+
+        float highest = bottom;
+        for (float t = 0f; t < 5f; t += Time.deltaTime)
+        {
+            highest = Mathf.Max(highest, lift.transform.position.y);
+            yield return null;
+        }
+        Assert.Greater(highest, bottom + 6f, "El montacargas debe subir hacia la azotea C.");
+
+        Vector3 overGap = new Vector3(16f, 20f, 131f);
+        Physics.Raycast(overGap, Vector3.down, out RaycastHit before, 30f, ~0, QueryTriggerInteraction.Ignore);
+        Assert.Less(before.point.y, 10f, "Antes del fragmento 5, entre la azotea D y el balcón no hay paso.");
+        yield return CollectAndWait(5, 5f);
+        Assert.IsTrue(Physics.Raycast(overGap, Vector3.down, out RaycastHit after, 30f, ~0, QueryTriggerInteraction.Ignore));
+        Assert.AreEqual(14.3f, after.point.y, 0.4f, "El brazo de la grúa debe quedar de puente.");
+    }
+}
+
+/// <summary>Nivel 9, El Hogar: tren, tocadiscos, cajones, regla, escalera y péndulo.</summary>
+public class Nivel09Tests : NivelesRealesTestsBase
+{
+    protected override string LevelScene => "Nivel09_Hogar";
+    protected override string[] KaelParts => new[] { "Cadera/Torso/Cuello del jersey" };
+    protected override Vector2? SprintTestStart => new Vector2(6f, -14f); // al norte del inicio está el fragmento 1
+
+    [UnityTest]
+    public IEnumerator Kael_ya_no_tiene_luz_ni_capa()
+    {
+        yield return LoadLevel();
+        Assert.IsNull(player.transform.Find("Visual/Cadera/Torso/Corazon de luz"));
+        Assert.IsNull(player.transform.Find("Visual/Cadera/Torso/Capa"));
+    }
+
+    [UnityTest]
+    public IEnumerator El_tren_atropella_a_Kael_en_la_via()
+    {
+        yield return LoadLevel(true);
+        OnlyHazard<PathHazard>("Tren de juguete");
+        Teleport(new Vector3(0f, 0.2f, 1f)); // en la vía, al norte de la alfombra
+        int deaths = 0;
+        yield return CountDeaths(13f, value => deaths = value);
+        Assert.GreaterOrEqual(deaths, 1, "Quieto en la vía, el tren debe atropellar a Kael.");
+    }
+
+    [UnityTest]
+    public IEnumerator La_regla_cae_y_hace_de_puente_a_la_estanteria()
+    {
+        yield return LoadLevel();
+        Vector3 overRuler = new Vector3(-3.5f, 15f, 27.7f);
+        Physics.Raycast(overRuler, Vector3.down, out RaycastHit before, 20f, ~0, QueryTriggerInteraction.Ignore);
+        Assert.Less(before.point.y, 1f, "Antes del fragmento 2, entre la mesa y la estantería no hay paso.");
+
+        yield return CollectAndWait(2, 4f);
+        Assert.IsTrue(Physics.Raycast(overRuler, Vector3.down, out RaycastHit after, 20f, ~0, QueryTriggerInteraction.Ignore));
+        Assert.AreEqual(6.3f, after.point.y, 0.4f, "La regla caída debe quedar tendida entre la mesa y la estantería.");
+    }
+
+    [UnityTest]
+    public IEnumerator La_escalera_sube_a_Kael_al_techo_de_la_estanteria()
+    {
+        yield return LoadLevel();
+        yield return CollectAndWait(3);
+
+        Teleport(new Vector3(12.6f, 6.6f, 30.8f)); // en la repisa, al pie de la escalera
+        yield return new WaitForSeconds(0.4f);
+        Press(keyboard.aKey); // la estantería queda al oeste: A empuja contra ella
+        yield return new WaitForSeconds(3.8f);
+        Release(keyboard.aKey);
+        yield return new WaitForSeconds(0.5f);
+        Assert.Greater(player.transform.position.y, 16.5f, "Kael debe llegar al techo de la estantería.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_pendulo_barre_el_techo_de_la_estanteria()
+    {
+        yield return LoadLevel(true);
+        OnlyHazard<SwingingPendulum>("Pendulo del reloj");
+        Teleport(new Vector3(5f, 17f, 30f));
+        int deaths = 0;
+        yield return CountDeaths(3f, value => deaths = value);
+        Assert.GreaterOrEqual(deaths, 1, "Bajo el péndulo, Kael debe caer derribado.");
+    }
+
+    [UnityTest]
+    public IEnumerator Los_cajones_salen_como_escalones()
+    {
+        yield return LoadLevel();
+        Physics.Raycast(new Vector3(12.7f, 10f, -15f), Vector3.down, out RaycastHit before, 20f, ~0, QueryTriggerInteraction.Ignore);
+        Assert.Less(before.point.y, 0.5f);
+
+        yield return CollectAndWait(4, 3f);
+        float[] expected = { 1.5f, 3f, 4.5f, 6f };
+        float[] x = { 12.7f, 14.2f, 15.7f, 17.2f };
+        for (int i = 0; i < 4; i++)
+        {
+            Assert.IsTrue(Physics.Raycast(new Vector3(x[i], 10f, -15f), Vector3.down, out RaycastHit step, 20f, ~0, QueryTriggerInteraction.Ignore));
+            Assert.AreEqual(expected[i], step.point.y, 0.2f, "Escalón " + (i + 1) + " de los cajones.");
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator El_tocadiscos_lleva_a_Kael_dando_vueltas()
+    {
+        yield return LoadLevel();
+        Teleport(new Vector3(27.5f, 8.2f, -14.5f)); // sobre el plato, a 2 m del centro
+        yield return new WaitForSeconds(0.5f);
+        Vector3 start = player.transform.position;
+        yield return new WaitForSeconds(2f);
+
+        Assert.Greater(FlatDistance(start, player.transform.position), 0.8f, "El plato debe llevar a Kael al girar.");
+        Assert.AreEqual(8.1f, player.transform.position.y, 0.3f, "Kael sigue de pie sobre el plato.");
     }
 }
