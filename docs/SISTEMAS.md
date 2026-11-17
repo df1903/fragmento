@@ -142,3 +142,28 @@ Cada nivel se juega distinto. Todas las piezas son componentes pequeños con sus
 - Los peligros nuevos heredan de `Hazard`: quietos en cámaras de evento y con gracia al reaparecer.
 - `PlayerController` expone `GravityScale`, `ExternalVelocity` y `Launch(altura)` para estas piezas.
 - El constructor anota los saltos normales en `Nivel/Ruta`; la prueba `Los_saltos_de_la_ruta_son_posibles` los comprueba.
+
+## Niveles realistas: 6 Bosque y 7 Aldea
+A partir del nivel 6 el mundo deja de ser islas de cubos. Tres archivos del Editor lo generan todo por código:
+
+- `FragmentoSceneBuilder.Realismo.cs`: pinta texturas píxel a píxel con ruido de Perlin (`MakeSurface`), saca de ellas el mapa de normales, y construye mallas (`BuildTerrainMesh`, `AddTrunk`, `AddBlob`, `BuildGableRoofMesh`, `BuildGrassMesh`). También el cielo (`ConfigureRealSky`) y el post-proceso (`TuneRealVolume`).
+- `FragmentoSceneBuilder.MundoReal.cs`: piezas listas para colocar (`CreateBeacon`, `CreateShadowWolf`, `CreateEcho`, `CreateHouse`, `CreateClimb`, `CreateGrassPatch`, `CreateCrate`, `CreatePressurePlate`).
+- `FragmentoSceneBuilder.KaelHumano.cs`: el cuerpo humano de Kael, hecho de pivotes (articulaciones) con piezas colgando.
+
+La forma de cada nivel es una función: `ForestHeight(x, z)` y `VillageHeight(x, z)` devuelven la altura del suelo. Todo lo demás se coloca preguntando a esa función.
+
+| Pieza | Script | Qué hace | Qué ajustar |
+|---|---|---|---|
+| Correr | `PlayerController` | Shift multiplica la velocidad | `sprintMultiplier` (1.5) |
+| Pulso de luz | `LightPulse` | F: anillo que enciende faros y aturde | `radius` (9), `cooldown` (3) |
+| Animación | `KaelAnimator` | Balancea piernas y brazos con senos | `stride`, `swing` |
+| Faro / farol | `Beacon` | Luz, zona segura y punto de reaparición | `safeRadius` |
+| Hierba alta | `TallGrass` + `PlayerStealth` | Esconde a Kael si no corre | tamaño de la zona |
+| Trepar | `ClimbZone` | Sube al caminar contra la pared | `climbSpeed` (4) |
+| Lobo de sombra | `ShadowWolf` | Ve a 14 m, oye correr a 22 m, teme la luz | `sightRange`, `chaseSpeed` (8.2), `stunSeconds` |
+| Eco | `Echo` | Solo avanza si no está en pantalla | `speed` (5), `wakeRange` |
+| Caja y placa | `CratePusher`, `PressurePlate` | La caja sobre la placa lanza un evento de mundo | `pushSpeed` |
+| Árbol-puente | `FallingTreeBridge` | Un árbol cae y su tronco es el puente | `fallSeconds` |
+| Mover algo | `MoveOnEvent` | Puertas, puente levadizo, arroyo que se seca | `offset`, `rotation`, `seconds` |
+
+Controles nuevos (solo niveles 6 y 7): **Shift** correr, **F** Pulso de luz (la E ya gira la cámara). Para trepar, caminar contra la liana o la escalera.

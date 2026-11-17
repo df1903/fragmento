@@ -39,6 +39,9 @@ Proyecto del curso **Desarrollo de Videojuegos** (equipo de 2 estudiantes). Hist
 |---|---|---|
 | Mover | `W` `A` `S` `D` o flechas | Stick izquierdo |
 | Saltar | `Espacio` | Botón sur (A / ✕) |
+| Correr (niveles 6 y 7) | `Shift` izquierdo | Gatillo derecho |
+| Pulso de luz (niveles 6 y 7) | `F` | Botón oeste (X / □) |
+| Trepar (niveles 6 y 7) | Caminar contra la liana o la escalera | Igual |
 | Girar cámara | `Q` / `E`, o clic derecho + mover el ratón; también acompaña sola al avanzar y girar (`W` + `A`/`D`) | Stick derecho |
 
 ## Estructura
