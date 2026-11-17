@@ -73,6 +73,7 @@ public class PlayerController : MonoBehaviour
     private float timeSinceJumpPressed = 999f;
     private bool inputLocked;
     private bool isGrounded;
+    private bool jumpCutAllowed;
     private Collider groundCollider;
 
     // Búfer reutilizable para no crear basura (garbage) en cada fotograma.
@@ -86,6 +87,15 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>Multiplicador de altura de salto (lo sube <see cref="PlayerPowerUp"/> con cada muerte).</summary>
     public float JumpMultiplier { get; set; } = 1f;
+
+    /// <summary>Multiplicador de gravedad (1 = normal). Lo baja <see cref="LowGravityZone"/>: salto más alto y lento.</summary>
+    public float GravityScale { get; set; } = 1f;
+
+    /// <summary>
+    /// Empuje externo en m/s (corrientes de agua, viento). Quien empuja lo suma en cada fotograma
+    /// (ver <see cref="PushZone"/>); aquí se usa una vez y se pone a cero.
+    /// </summary>
+    public Vector3 ExternalVelocity { get; set; }
 
     /// <summary>True si Kael pisa el suelo (calculado en el último Update).</summary>
     public bool IsGrounded => isGrounded;
@@ -169,25 +179,40 @@ public class PlayerController : MonoBehaviour
             verticalVelocity = Mathf.Sqrt(2f * -gravity * jumpHeight * JumpMultiplier); // v = raíz(2·g·h)
             timeSinceGrounded = 999f;      // el coyote time se gasta: no hay doble salto
             timeSinceJumpPressed = 999f;   // el buffer se gasta
+            jumpCutAllowed = true;
         }
 
         // Salto variable: soltar el botón en la subida lo acorta (toque = salto bajo, mantener = salto completo).
-        if (jumpReleased && verticalVelocity > 0f)
+        // No se aplica a los rebotes (Launch): soltar el botón no debe frenar un hongo de rebote.
+        if (jumpReleased && verticalVelocity > 0f && jumpCutAllowed)
         {
             verticalVelocity *= jumpCutMultiplier;
         }
 
         float gravityScale = verticalVelocity < 0f ? fallGravityMultiplier : 1f;
-        verticalVelocity = Mathf.Max(verticalVelocity + gravity * gravityScale * dt, maxFallSpeed);
+        verticalVelocity = Mathf.Max(verticalVelocity + gravity * gravityScale * GravityScale * dt, maxFallSpeed);
 
         // --- Movimiento horizontal relativo a la cámara, con aceleración suave ---
         Vector3 moveDirection = CameraRelativeDirection(input);
         float acceleration = isGrounded ? groundAcceleration : airAcceleration;
         horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, moveDirection * moveSpeed * SpeedMultiplier, acceleration * dt);
-        Vector3 velocity = horizontalVelocity + Vector3.up * verticalVelocity;
+        Vector3 velocity = horizontalVelocity + ExternalVelocity + Vector3.up * verticalVelocity;
         controller.Move(velocity * dt);
+        ExternalVelocity = Vector3.zero; // el empuje vale un fotograma: quien empuja lo vuelve a sumar
 
         RotateVisual(moveDirection, dt);
+    }
+
+    /// <summary>
+    /// Lanza a Kael hacia arriba hasta "height" metros (hongos de rebote). Misma fórmula que el salto:
+    /// v = raíz(2·g·h), con la gravedad normal.
+    /// </summary>
+    public void Launch(float height)
+    {
+        verticalVelocity = Mathf.Sqrt(2f * -gravity * height);
+        timeSinceGrounded = 999f;   // en el aire: no se puede saltar encima del rebote
+        timeSinceJumpPressed = 999f;
+        jumpCutAllowed = false;
     }
 
     /// <summary>
@@ -202,6 +227,8 @@ public class PlayerController : MonoBehaviour
 
         verticalVelocity = 0f;
         horizontalVelocity = Vector3.zero;
+        ExternalVelocity = Vector3.zero;
+        GravityScale = 1f;
         timeSinceGrounded = 999f;
         timeSinceJumpPressed = 999f;
         isGrounded = false;
