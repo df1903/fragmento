@@ -307,8 +307,16 @@ public class Nivel04Tests : NivelesTematicosTestsBase
         yield return new WaitForSeconds(0.5f);
         Assert.IsTrue(leaf.IsShaking, "Al pisarla, la hoja debe temblar.");
 
-        yield return new WaitForSeconds(0.8f);
-        Assert.IsFalse(leaf.IsSolid, "Tras el aviso, la hoja debe caer.");
+        // Se mira cada fotograma: al caer la hoja, Kael cae al valle, muere y la hoja reaparece enseguida.
+        bool fell = false;
+        float timeout = 1.5f;
+        while (!fell && timeout > 0f)
+        {
+            timeout -= Time.deltaTime;
+            fell = !leaf.IsSolid;
+            yield return null;
+        }
+        Assert.IsTrue(fell, "Tras el aviso, la hoja debe caer.");
 
         yield return new WaitForSeconds(3.3f);
         Assert.IsTrue(leaf.IsSolid, "La hoja debe volver a aparecer.");
