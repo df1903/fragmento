@@ -61,6 +61,12 @@ public static partial class FragmentoSceneBuilder
 
         // Decorado propio del nivel (sin colliders salvo piezas sólidas pequeñas).
         public System.Action<Transform, Materials, LevelTheme> Decorate;
+
+        // --- Ganchos de los niveles realistas (6 y 7); en los demás se quedan vacíos ---
+        public System.Func<Materials, GameObject> CreateKael;       // prefab de Kael propio (humano)
+        public System.Action<VolumeProfile> TuneVolume;             // retoques del post-proceso
+        public System.Action<LevelContext, Transform> OnKaelPlaced; // algo que debe seguir a Kael (la lluvia)
+        public bool RespawnAtCheckpoint;                            // reaparecer en el último faro encendido
     }
 
     // Lo que necesita un nivel para armar su recorrido.
@@ -187,8 +193,14 @@ public static partial class FragmentoSceneBuilder
             Projectile = CreateProjectilePrefab(danger.Projectile),
         };
 
-        GameObject kaelPrefab = CreateKaelPrefab(materials, theme.KaelPrefabName, theme.KaelRings, theme.KaelStage);
+        GameObject kaelPrefab = theme.CreateKael != null
+            ? theme.CreateKael(materials)
+            : CreateKaelPrefab(materials, theme.KaelPrefabName, theme.KaelRings, theme.KaelStage);
         VolumeProfile volumeProfile = CreateThemeVolumeProfile(theme);
+        if (theme.TuneVolume != null)
+        {
+            theme.TuneVolume(volumeProfile);
+        }
 
         BuildThemedScene(context, kaelPrefab, volumeProfile);
 
@@ -231,13 +243,20 @@ public static partial class FragmentoSceneBuilder
         // --- Suelos, y después lo propio del nivel: fragmentos, eventos, dinámicas y peligros ---
         BuildThemedZones(level.transform, materials, theme);
         theme.BuildLayout(context);
-        theme.Decorate(level.transform, materials, theme);
+        if (theme.Decorate != null)
+        {
+            theme.Decorate(level.transform, materials, theme);
+        }
         CreateEventCamera();
 
         // --- Jugador y cámara ---
         GameObject kael = (GameObject)PrefabUtility.InstantiatePrefab(kaelPrefab);
         kael.transform.position = theme.Spawn;
         CreatePlayerCamera(kael.transform.Find("CameraTarget"));
+        if (theme.OnKaelPlaced != null)
+        {
+            theme.OnKaelPlaced(context, kael.transform);
+        }
 
         // --- Caída, respawn y gestores ---
         GameObject killZone = new GameObject("Zona de caida");
@@ -254,6 +273,7 @@ public static partial class FragmentoSceneBuilder
         RespawnManager respawnManager = respawn.AddComponent<RespawnManager>();
         SerializedObject respawnSerialized = new SerializedObject(respawnManager);
         Property(respawnSerialized, "initialSpawn").objectReferenceValue = spawnPoint.transform;
+        Property(respawnSerialized, "respawnAtCheckpoint").boolValue = theme.RespawnAtCheckpoint;
         respawnSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         GameObject managers = new GameObject("Gestor de Fragmentos");
