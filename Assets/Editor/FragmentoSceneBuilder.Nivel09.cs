@@ -92,7 +92,7 @@ public static partial class FragmentoSceneBuilder
         {
             ScenePath = Nivel09ScenePath,
             VolumePath = SettingsFolder + "/Nivel09_PerfilVolumen.asset",
-            NextScenePath = "",
+            NextScenePath = Nivel10ScenePath,
             FilePrefix = "N9_",
             KaelPrefabName = "Kael_Nivel9",
             KaelStage = 9,

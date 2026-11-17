@@ -32,6 +32,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Nivel09_Hogar.unity
     guid: 48b6ff715181fd947bea74ba23d47eb0
+  - enabled: 1
+    path: Assets/Scenes/Nivel10_Despertar.unity
+    guid: 88722883cee968a4ab4cec7c4f64cb1a
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

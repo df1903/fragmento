@@ -652,3 +652,128 @@ public class Nivel09Tests : NivelesRealesTestsBase
         Assert.AreEqual(8.1f, player.transform.position.y, 0.3f, "Kael sigue de pie sobre el plato.");
     }
 }
+
+/// <summary>Nivel 10, El Jardín del Amanecer: cama elástica, aspersor, rastrillo, flores, columpio, Sombra, amanecer y créditos.</summary>
+public class Nivel10Tests : NivelesRealesTestsBase
+{
+    protected override string LevelScene => "Nivel10_Despertar";
+    protected override string[] KaelParts => new[] { "Cadera/Torso/Cuello del pijama" };
+
+    [UnityTest]
+    public IEnumerator La_cama_elastica_aparece_y_lanza_a_Kael()
+    {
+        yield return LoadLevel();
+        Assert.AreEqual(0, Object.FindObjectsByType<BouncePad>(FindObjectsSortMode.None).Length, "La cama elástica no está hasta el fragmento 1.");
+        yield return CollectAndWait(1, 2f);
+
+        BouncePad pad = FindByName<BouncePad>("Cama elastica");
+        Teleport(pad.transform.position + Vector3.up * 0.05f);
+        float max = 0f;
+        for (float t = 0f; t < 2f; t += Time.deltaTime)
+        {
+            max = Mathf.Max(max, player.transform.position.y);
+            yield return null;
+        }
+        Assert.Greater(max, 5.5f, "La cama elástica debe lanzar a Kael por encima de la mesa de pícnic.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_aspersor_mata_a_quien_no_salta_el_chorro()
+    {
+        yield return LoadLevel(true);
+        OnlyHazard<SweepingBeam>("Aspersor 1");
+        Teleport(new Vector3(2f, 0.05f, -11f)); // a 5 m del aspersor: el chorro (8 m) pasa por aquí
+        int deaths = 0;
+        yield return CountDeaths(10f, value => deaths = value);
+        Assert.GreaterOrEqual(deaths, 1, "Quieto en el césped, el chorro del aspersor debe derribar a Kael.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_rastrillo_cae_hasta_la_jardinera()
+    {
+        yield return LoadLevel();
+        Vector3 overRake = new Vector3(-24f, 20f, 6.5f);
+        Physics.Raycast(overRake, Vector3.down, out RaycastHit before, 30f, ~0, QueryTriggerInteraction.Ignore);
+        Assert.Less(before.point.y, 1f, "Antes del fragmento 2, entre la mesa y la jardinera no hay paso.");
+
+        yield return CollectAndWait(2, 4f);
+        Assert.IsTrue(Physics.Raycast(overRake, Vector3.down, out RaycastHit after, 30f, ~0, QueryTriggerInteraction.Ignore));
+        Assert.AreEqual(7.2f, after.point.y, 0.6f, "El mango del rastrillo debe quedar tendido entre la mesa y la jardinera.");
+    }
+
+    [UnityTest]
+    public IEnumerator Las_flores_crecen_hasta_la_valla()
+    {
+        yield return LoadLevel();
+        CrystalGrow flowers = FindByName<CrystalGrow>("Flores gigantes");
+        Assert.IsFalse(flowers.HasRun);
+        yield return CollectAndWait(3, 3f);
+
+        Assert.IsTrue(flowers.HasRun);
+        Assert.IsTrue(Physics.Raycast(new Vector3(-31.8f, 20f, 32f), Vector3.down, out RaycastHit head, 30f, ~0, QueryTriggerInteraction.Ignore));
+        Assert.AreEqual(13.1f, head.point.y, 0.3f, "La última flor debe quedar a un paso de lo alto de la valla.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_columpio_oscila_de_la_valla_al_roble()
+    {
+        yield return LoadLevel();
+        SwingPlatform swing = FindByName<SwingPlatform>("Columpio");
+        Transform seat = GameObject.Find("Asiento del columpio").transform;
+        Assert.IsFalse(swing.IsSwinging);
+
+        yield return CollectAndWait(4, 0f);
+        Assert.IsTrue(swing.IsSwinging);
+        float minX = seat.position.x, maxX = seat.position.x, maxY = 0f;
+        for (float t = 0f; t < 16f; t += Time.deltaTime)
+        {
+            minX = Mathf.Min(minX, seat.position.x);
+            maxX = Mathf.Max(maxX, seat.position.x);
+            maxY = Mathf.Max(maxY, seat.position.y);
+            yield return null;
+        }
+
+        Assert.Less(minX, -30f, "El columpio debe llegar junto a la valla.");
+        Assert.Greater(maxX, -8f, "El columpio debe llegar junto a la rama baja del roble.");
+        Assert.Greater(maxY, 13f, "En los extremos, el asiento sube a la altura de la valla y de la rama.");
+    }
+
+    [UnityTest]
+    public IEnumerator La_sombra_sube_mata_y_vuelve_al_suelo_al_reaparecer()
+    {
+        yield return LoadLevel(true);
+        RisingShadow shadow = OnlyHazard<RisingShadow>("Sombra del Olvido");
+        float start = shadow.SurfaceY;
+        Assert.IsFalse(shadow.IsAwake);
+
+        yield return CollectAndWait(6, 4f);
+        Assert.IsTrue(shadow.IsAwake, "El fragmento 6 despierta la sombra.");
+        Assert.Greater(shadow.SurfaceY, start + 1.5f, "La sombra debe estar subiendo.");
+
+        int deaths = 0;
+        System.Action counter = () => deaths++;
+        GameEvents.PlayerDied += counter;
+        Teleport(new Vector3(0f, 0.1f, -20f)); // de vuelta al césped, ya cubierto
+        for (float t = 0f; t < 1f && deaths == 0; t += Time.deltaTime)
+        {
+            yield return null;
+        }
+        GameEvents.PlayerDied -= counter;
+        Assert.GreaterOrEqual(deaths, 1, "Bajo la sombra, Kael muere.");
+
+        yield return null;
+        Assert.Less(shadow.SurfaceY, start + 0.5f, "Al reaparecer Kael, la sombra vuelve al suelo.");
+    }
+
+    [UnityTest]
+    public IEnumerator El_final_amanece_y_muestra_los_creditos()
+    {
+        yield return CollectAllFragments();
+        Assert.IsTrue(Object.FindFirstObjectByType<DawnFinale>().HasStarted, "Al restaurar el núcleo debe amanecer.");
+        Assert.IsNull(Object.FindFirstObjectByType<EndScreen>(), "El último nivel no tiene pantalla de 'siguiente nivel'.");
+
+        GameEvents.RaiseLevelCompleted();
+        yield return null;
+        Assert.IsTrue(Object.FindFirstObjectByType<FinalCredits>().IsShown, "Al cruzar el último portal aparecen los créditos.");
+    }
+}

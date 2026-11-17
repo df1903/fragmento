@@ -31,6 +31,9 @@ public class MovingPlatformActivate : WorldEventBase
     [Tooltip("Si está marcado, se mueve desde el principio sin esperar a un fragmento (balsas del nivel 5).")]
     [SerializeField] private bool activeFromStart;
 
+    [Tooltip("Segundos que espera antes del primer movimiento. Desfasa plataformas vecinas (teclas del piano del nivel 10).")]
+    [SerializeField] private float startDelay;
+
     [Tooltip("Renderer cuyo material cambia al activarse.")]
     [SerializeField] private Renderer platformRenderer;
 
@@ -69,6 +72,7 @@ public class MovingPlatformActivate : WorldEventBase
             }
 
             moving = true;
+            pauseTimer = startDelay;
         }
     }
 
@@ -81,6 +85,7 @@ public class MovingPlatformActivate : WorldEventBase
 
         // Pequeña pausa para que se vea que "despierta" antes de moverse.
         yield return new WaitForSeconds(0.5f);
+        pauseTimer = startDelay;
         moving = true;
     }
 

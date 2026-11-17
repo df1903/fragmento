@@ -67,6 +67,7 @@ public static partial class FragmentoSceneBuilder
         public System.Action<VolumeProfile> TuneVolume;             // retoques del post-proceso
         public System.Action<LevelContext, Transform> OnKaelPlaced; // algo que debe seguir a Kael (la lluvia)
         public bool RespawnAtCheckpoint;                            // reaparecer en el último faro encendido
+        public System.Action<GameObject> AfterHud;                  // cambios en el HUD (los créditos del final)
     }
 
     // Lo que necesita un nivel para armar su recorrido.
@@ -281,6 +282,10 @@ public static partial class FragmentoSceneBuilder
         managers.AddComponent<LivesManager>();
 
         CreateHud(theme.NextScenePath, 7);
+        if (theme.AfterHud != null)
+        {
+            theme.AfterHud(GameObject.Find("HUD"));
+        }
 
         EditorSceneManager.SaveScene(scene, theme.ScenePath);
         RegisterScenesInBuildSettings();

@@ -179,3 +179,13 @@ Controles nuevos (solo niveles 6 y 7): **Shift** correr, **F** Pulso de luz (la 
 | Péndulo | `SwingingPendulum` | Oscila y barre el camino | `amplitude`, `period` |
 
 El nivel 9 no escala a Kael: los muebles miden 8 veces lo normal (mesa a 6 m, estantería a 17 m). Las texturas se repiten 8 veces menos para que la madera y las telas se vean a esa escala.
+
+## Nivel 10 (El Jardín del Amanecer) y el final del juego
+| Pieza | Script | Qué hace | Qué ajustar |
+|---|---|---|---|
+| Sombra del Olvido | `RisingShadow` | Sube desde el suelo tras el fragmento 6, apaga las luces bajas, mata si cubre a Kael y vuelve abajo al reaparecer | `riseSpeed` (1), `maxHeight` (22), `startDelay` |
+| Columpio | `SwingPlatform` | El asiento oscila en arco y lleva a Kael de la valla al roble | `length`, `amplitude` (45), `period` (7) |
+| Aspersor | `SweepingBeam` | Chorro de agua a ras de suelo que gira: se salta | `degreesPerSecond`, `length` |
+| Plataformas desfasadas | `MovingPlatformActivate.startDelay` | Retrasa el primer movimiento para desfasar plataformas vecinas | `startDelay` |
+| Amanecer | `DawnFinale` | Al restaurar el núcleo, el sol y el ambiente pasan a dorado | `seconds`, colores finales |
+| Créditos | `FinalCredits` | Fundido a blanco, frases finales y créditos; Enter vuelve al nivel 1 | `lines` (poner los nombres del equipo) |

@@ -45,6 +45,12 @@ public static partial class FragmentoSceneBuilder
             cloak = tunic;
             trousers = GetOrCreateTexturedMaterialCopy("RealVaquero", real.Cloth, new Color(0.2f, 0.25f, 0.34f));
         }
+        else if (stage >= 10)
+        {
+            // Pijama: Kael acaba de despertar.
+            tunic = GetOrCreateTexturedMaterialCopy("RealPijama", real.Cloth, new Color(0.5f, 0.64f, 0.85f));
+            trousers = tunic;
+        }
         else if (stage >= 9)
         {
             tunic = GetOrCreateTexturedMaterialCopy("RealJersey", real.Cloth, new Color(0.62f, 0.2f, 0.16f));
@@ -154,6 +160,15 @@ public static partial class FragmentoSceneBuilder
                 haloLine.SetPosition(i, new Vector3(Mathf.Cos(angle) * 0.17f, 0f, Mathf.Sin(angle) * 0.17f));
             }
             CreateVisualPart("Cuello de la chaqueta", torso, PrimitiveType.Cube, new Vector3(0f, 0.46f, -0.02f), new Vector3(0.3f, 0.08f, 0.22f), Vector3.zero, tunic);
+        }
+
+        if (stage >= 10)
+        {
+            CreateVisualPart("Cuello del pijama", torso, PrimitiveType.Cube, new Vector3(0f, 0.45f, 0.07f), new Vector3(0.22f, 0.06f, 0.08f), new Vector3(-20f, 0f, 0f), real.Cloth);
+            for (int i = 0; i < 3; i++)
+            {
+                CreateVisualPart("Boton", torso, PrimitiveType.Sphere, new Vector3(0f, 0.36f - i * 0.11f, 0.1f), Vector3.one * 0.025f, Vector3.zero, real.Cloth);
+            }
         }
 
         if (stage == 9)
