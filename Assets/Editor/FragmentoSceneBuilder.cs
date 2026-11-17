@@ -1240,7 +1240,7 @@ public static partial class FragmentoSceneBuilder
     // Añade a Build Settings las escenas de nivel que existan, en orden (Nivel 1 primero). Hace falta para SceneManager.LoadScene.
     private static void RegisterScenesInBuildSettings()
     {
-        string[] paths = { ScenePath, Nivel02ScenePath, Nivel03ScenePath, Nivel04ScenePath, Nivel05ScenePath, Nivel06ScenePath, Nivel07ScenePath };
+        string[] paths = { ScenePath, Nivel02ScenePath, Nivel03ScenePath, Nivel04ScenePath, Nivel05ScenePath, Nivel06ScenePath, Nivel07ScenePath, Nivel08ScenePath, Nivel09ScenePath };
         var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
         foreach (string path in paths)
         {

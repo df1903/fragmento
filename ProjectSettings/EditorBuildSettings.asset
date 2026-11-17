@@ -12,11 +12,26 @@ EditorBuildSettings:
     path: Assets/Scenes/Nivel02_Cavernas.unity
     guid: 03effe699e6d3954e9713b00a53233ff
   - enabled: 1
+    path: Assets/Scenes/Nivel03_Observatorio.unity
+    guid: d32f77630e843274495ea157dda7b63d
+  - enabled: 1
     path: Assets/Scenes/Nivel04_Jardin.unity
     guid: aea1b009fbb0c4246afa6ad4fc506fef
   - enabled: 1
     path: Assets/Scenes/Nivel05_Lago.unity
     guid: 94cf882cf4893fe44afd9e84027f8c4d
+  - enabled: 1
+    path: Assets/Scenes/Nivel06_Bosque.unity
+    guid: dcdff525fbafce6409f2dbba8ec7dd50
+  - enabled: 1
+    path: Assets/Scenes/Nivel07_Aldea.unity
+    guid: 0ec305d1d87767648959289e4fdaf80f
+  - enabled: 1
+    path: Assets/Scenes/Nivel08_Ciudad.unity
+    guid: 92d8b9c50e72e0442945c1054b0b8fd3
+  - enabled: 1
+    path: Assets/Scenes/Nivel09_Hogar.unity
+    guid: 48b6ff715181fd947bea74ba23d47eb0
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -30,13 +30,26 @@ public static partial class FragmentoSceneBuilder
     }
 
     // stage 6: piel con brillo y túnica azul. stage 7: piel normal, ropa de tierra, capucha y zurrón.
+    // stage 8: ropa de ciudad (chaqueta) y un halo tenue. stage 9: ropa de casa (jersey), sin capa ni brillo.
     private static GameObject CreateHumanKaelPrefab(Materials materials, RealMaterials real, string prefabName, int stage)
     {
         bool human = stage >= 7;
+        bool modern = stage >= 8;
         Material skin = human ? GetOrCreateMaterial("RealPielHumana", new Color(0.82f, 0.62f, 0.5f), null, 0f, 0.35f) : real.Skin;
         Material tunic = human ? real.ClothDark : real.Cloth;
         Material cloak = human ? GetOrCreateTexturedMaterialCopy("RealCapaVerde", real.Cloth, new Color(0.16f, 0.24f, 0.16f)) : real.ClothDark;
         Material trousers = GetOrCreateTexturedMaterialCopy("RealPantalon", real.Cloth, new Color(0.17f, 0.16f, 0.2f));
+        if (stage == 8)
+        {
+            tunic = GetOrCreateTexturedMaterialCopy("RealChaqueta", real.Cloth, new Color(0.12f, 0.17f, 0.26f));
+            cloak = tunic;
+            trousers = GetOrCreateTexturedMaterialCopy("RealVaquero", real.Cloth, new Color(0.2f, 0.25f, 0.34f));
+        }
+        else if (stage >= 9)
+        {
+            tunic = GetOrCreateTexturedMaterialCopy("RealJersey", real.Cloth, new Color(0.62f, 0.2f, 0.16f));
+            trousers = GetOrCreateTexturedMaterialCopy("RealPantalonCasa", real.Cloth, new Color(0.3f, 0.27f, 0.22f));
+        }
 
         GameObject root = new GameObject("Kael");
         root.tag = "Player";
@@ -75,8 +88,11 @@ public static partial class FragmentoSceneBuilder
         CreateVisualPart("Pecho", torso, PrimitiveType.Capsule, new Vector3(0f, 0.24f, 0f), new Vector3(0.33f, 0.27f, 0.2f), Vector3.zero, tunic);
         CreateVisualPart("Cinturon", torso, PrimitiveType.Cube, new Vector3(0f, 0.02f, 0f), new Vector3(0.35f, 0.06f, 0.23f), Vector3.zero, real.Leather);
         CreateVisualPart("Cuello", torso, PrimitiveType.Cylinder, new Vector3(0f, 0.5f, 0f), new Vector3(0.09f, 0.05f, 0.09f), Vector3.zero, skin);
-        // El corazón de luz: lo que queda del Kael de los primeros niveles.
-        NoShadow(CreateVisualPart("Corazon de luz", torso, PrimitiveType.Sphere, new Vector3(0f, 0.33f, 0.09f), Vector3.one * (human ? 0.07f : 0.1f), Vector3.zero, real.Glow));
+        // El corazón de luz: lo que queda del Kael de los primeros niveles. En la etapa 9 ya no queda.
+        if (stage < 9)
+        {
+            NoShadow(CreateVisualPart("Corazon de luz", torso, PrimitiveType.Sphere, new Vector3(0f, 0.33f, 0.09f), Vector3.one * (human ? 0.07f : 0.1f), Vector3.zero, real.Glow));
+        }
 
         // --- Cabeza ---
         Transform head = CreatePivot("Cabeza", torso, new Vector3(0f, 0.56f, 0f));
@@ -91,7 +107,7 @@ public static partial class FragmentoSceneBuilder
             CreateVisualPart("Ceja " + sidesFeminine[i], head, PrimitiveType.Cube, new Vector3(x, 0.15f, 0.097f), new Vector3(0.05f, 0.012f, 0.02f), Vector3.zero, real.Hair);
         }
 
-        if (human)
+        if (stage == 7)
         {
             CreateVisualPart("Capucha", head, PrimitiveType.Sphere, new Vector3(0f, 0.12f, -0.055f), new Vector3(0.27f, 0.3f, 0.27f), Vector3.zero, cloak);
         }
@@ -109,9 +125,43 @@ public static partial class FragmentoSceneBuilder
         }
 
         // --- Capa (cuelga de los hombros y se levanta al correr) y zurrón ---
-        Transform cape = CreatePivot("Capa", torso, new Vector3(0f, 0.46f, -0.11f));
-        CreateVisualPart("Tela", cape, PrimitiveType.Cube, new Vector3(0f, -0.4f, -0.02f), new Vector3(0.42f, 0.8f, 0.03f), Vector3.zero, cloak);
-        if (human)
+        // Etapa 8: en vez de capa, el faldón de la chaqueta (más corto). Etapa 9: nada.
+        Transform cape = null;
+        if (stage < 9)
+        {
+            cape = CreatePivot("Capa", torso, new Vector3(0f, modern ? 0.1f : 0.46f, -0.11f));
+            CreateVisualPart("Tela", cape, PrimitiveType.Cube, new Vector3(0f, modern ? -0.14f : -0.4f, -0.02f), new Vector3(0.36f, modern ? 0.3f : 0.8f, 0.03f), Vector3.zero, cloak);
+        }
+
+        if (stage == 8)
+        {
+            // Halo tenue: un aro de luz fino sobre la cabeza, lo último de luz que le queda a Kael.
+            GameObject halo = new GameObject("Halo");
+            halo.transform.SetParent(visual, false);
+            halo.transform.localPosition = new Vector3(0f, 1.95f, 0f);
+            LineRenderer haloLine = halo.AddComponent<LineRenderer>();
+            haloLine.useWorldSpace = false;
+            haloLine.loop = true;
+            haloLine.widthMultiplier = 0.025f;
+            haloLine.sharedMaterial = materials.Trail;
+            haloLine.shadowCastingMode = ShadowCastingMode.Off;
+            haloLine.startColor = new Color(0.7f, 1f, 1f);
+            haloLine.endColor = new Color(0.7f, 1f, 1f);
+            haloLine.positionCount = 32;
+            for (int i = 0; i < 32; i++)
+            {
+                float angle = i * Mathf.PI * 2f / 32f;
+                haloLine.SetPosition(i, new Vector3(Mathf.Cos(angle) * 0.17f, 0f, Mathf.Sin(angle) * 0.17f));
+            }
+            CreateVisualPart("Cuello de la chaqueta", torso, PrimitiveType.Cube, new Vector3(0f, 0.46f, -0.02f), new Vector3(0.3f, 0.08f, 0.22f), Vector3.zero, tunic);
+        }
+
+        if (stage == 9)
+        {
+            CreateVisualPart("Cuello del jersey", torso, PrimitiveType.Cylinder, new Vector3(0f, 0.47f, 0f), new Vector3(0.16f, 0.04f, 0.16f), Vector3.zero, tunic);
+        }
+
+        if (stage == 7)
         {
             CreateVisualPart("Zurron", torso, PrimitiveType.Cube, new Vector3(0.2f, 0f, -0.03f), new Vector3(0.1f, 0.2f, 0.18f), Vector3.zero, real.Leather);
             CreateVisualPart("Correa", torso, PrimitiveType.Cube, new Vector3(0f, 0.25f, 0.105f), new Vector3(0.46f, 0.035f, 0.01f), new Vector3(0f, 0f, 35f), real.Leather);
@@ -155,7 +205,7 @@ public static partial class FragmentoSceneBuilder
         light.type = LightType.Point;
         light.color = human ? new Color(0.75f, 0.95f, 1f) : new Color(0.45f, 0.95f, 1f);
         light.range = human ? 6f : 8f;
-        light.intensity = human ? 1.8f : 3.2f;
+        light.intensity = stage >= 9 ? 0.8f : human ? 1.8f : 3.2f;
         light.shadows = LightShadows.None;
 
         GameObject cameraTarget = new GameObject("CameraTarget");
