@@ -368,6 +368,8 @@ MonoBehaviour:
   moveSpeed: 7
   groundAcceleration: 50
   airAcceleration: 25
+  canSprint: 0
+  sprintMultiplier: 1.5
   visual: {fileID: 5551114820579523604}
   turnSpeed: 720
   jumpHeight: 1.8
