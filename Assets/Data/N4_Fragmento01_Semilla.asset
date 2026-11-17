@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 1
   displayName: Fragmento de la Semilla
-  message: 'Del suelo brotan troncos: un sendero cruza el barranco.'
+  message: 'Del valle brotan troncos: un sendero sube hacia el invernadero.'
   eventId: cristal_1
   color: {r: 1, g: 0.75, b: 0.25, a: 1}

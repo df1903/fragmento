@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 3
   displayName: Fragmento del Polen
-  message: "Una plataforma de piedra florece y cruza el vac\xEDo."
-  eventId: plataforma_3
+  message: "Un puente de ra\xEDces une la terraza alta con el mirador."
+  eventId: puente_3
   color: {r: 1, g: 0.75, b: 0.25, a: 1}

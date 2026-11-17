@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 1
   displayName: Fragmento de la Orilla
-  message: 'Piedras de cruce emergen del agua: un camino atraviesa el lago.'
-  eventId: cristal_1
+  message: La balsa del embarcadero despierta y cruza hacia el islote.
+  eventId: balsa_1
   color: {r: 1, g: 0.75, b: 0.25, a: 1}

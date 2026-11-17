@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 3
   displayName: Fragmento del Remanso
-  message: Una plataforma de piedra despierta y cruza el remanso.
-  eventId: plataforma_3
+  message: Un puente de roca sube del remanso a la presa.
+  eventId: puente_3
   color: {r: 1, g: 0.75, b: 0.25, a: 1}

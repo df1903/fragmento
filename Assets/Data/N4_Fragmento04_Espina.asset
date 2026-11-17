@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 4
   displayName: Fragmento de la Espina
-  message: "La compuerta de zarzas se hunde: el sendero est\xE1 libre."
+  message: La compuerta del invernadero se hunde.
   eventId: puerta_4
   color: {r: 1, g: 0.75, b: 0.25, a: 1}

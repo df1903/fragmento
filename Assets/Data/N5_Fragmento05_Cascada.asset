@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 5
   displayName: Fragmento de la Cascada
-  message: Piedras emergen junto a la cascada y suben hacia la poza.
-  eventId: cristal_5
+  message: Una balsa despierta al final del cauce y navega hacia la poza.
+  eventId: balsa_5
   color: {r: 1, g: 0.75, b: 0.25, a: 1}

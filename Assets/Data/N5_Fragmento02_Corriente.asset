@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 2
   displayName: Fragmento de la Corriente
-  message: Un puente de roca une la orilla con la meseta alta.
-  eventId: puente_2
+  message: 'Piedras de cruce emergen del agua. Cuidado: la marea las cubre.'
+  eventId: cristal_2
   color: {r: 1, g: 0.75, b: 0.25, a: 1}

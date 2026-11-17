@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fragmento::FragmentData
   id: 2
   displayName: "Fragmento de la Ra\xEDz"
-  message: "Un puente de ra\xEDces une el claro con la terraza."
-  eventId: puente_2
+  message: 'Los hongos del claro despiertan: saltar sobre ellos lanza muy alto.'
+  eventId: hongos_2
   color: {r: 1, g: 0.75, b: 0.25, a: 1}
